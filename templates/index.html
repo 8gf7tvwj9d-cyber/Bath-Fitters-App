@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ShopFlow Inventory</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <div class="page-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <p class="eyebrow">Shop Inventory Command Center</p>
+        <h1>ShopFlow</h1>
+        <p class="brand-copy">A starter system for receiving, stock control, purchasing, and job usage tracking.</p>
+      </div>
+      <section class="sidebar-card">
+        <h2>Warehouse</h2>
+        <label class="warehouse-picker-label">
+          Active warehouse
+          <select id="warehouse-selector"></select>
+        </label>
+        <p id="warehouse-summary" class="subtle">Showing one location at a time.</p>
+      </section>
+      <nav class="nav">
+        <button class="nav-link active" data-view="dashboard">Dashboard</button>
+        <button class="nav-link nav-link-badged" data-view="inventory">Inventory <span id="inventory-attention-badge" class="nav-badge hidden">0</span></button>
+        <button class="nav-link nav-link-badged" data-view="purchase-orders">Purchase Orders <span id="po-attention-badge" class="nav-badge hidden">0</span></button>
+        <button class="nav-link" data-view="receiving">Parts Received</button>
+        <button class="nav-link" data-view="jobs">Jobs</button>
+        <button class="nav-link" data-view="vendors">Vendors</button>
+        <button class="nav-link" data-view="warehouses">Warehouses</button>
+      </nav>
+      <section class="sidebar-card">
+        <h2>Why This Version Helps</h2>
+        <p>It gives you a clean workflow demo right away and stores data in your browser so you can test ideas quickly.</p>
+      </section>
+    </aside>
+
+    <main class="content">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">MVP Web App</p>
+          <h2>Inventory built around how the shop actually works</h2>
+          <p class="hero-copy">Track parts from purchase order to receiving to job usage, with reorder visibility and part history in one place.</p>
+        </div>
+        <div class="hero-actions">
+          <button id="reset-demo" class="secondary">Reset Demo Data</button>
+          <button id="export-data" class="primary">Export JSON Snapshot</button>
+        </div>
+      </header>
+
+      <section id="dashboard-view" class="view active"></section>
+
+      <section id="inventory-view" class="view">
+        <div class="section-heading section-heading-split">
+          <div><p class="eyebrow">Inventory</p><h3>Parts on hand</h3></div>
+          <button class="secondary form-toggle" data-form-target="part-form-panel" data-open-label="Add Part" data-close-label="Hide Form">Add Part</button>
+        </div>
+        <div id="part-form-panel" class="panel form-panel hidden">
+          <form id="part-form" class="form-grid">
+            <label>Part Number<input id="part-number" type="text" required></label>
+            <label>Description<input id="part-description" type="text" required></label>
+            <label>Category<input id="part-category" type="text" required></label>
+            <label>Current Stock<input id="part-stock" type="number" min="0" required></label>
+            <label>Reorder Point<input id="part-reorder" type="number" min="0" required></label>
+            <label>Preferred Vendor<select id="part-vendor"></select></label>
+            <label>Unit Cost<input id="part-cost" type="number" min="0" step="0.01" required></label>
+            <div class="form-actions">
+              <button type="submit" class="primary">Add Part</button>
+              <button type="button" id="part-form-clear" class="ghost">Clear</button>
+            </div>
+          </form>
+        </div>
+        <div class="panel">
+          <div class="table-header">
+            <h4>Inventory List</h4>
+            <input id="inventory-search" type="search" placeholder="Search part, category, or vendor">
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Part</th><th>Stock</th><th>Vendor</th><th>Status</th><th></th></tr></thead>
+              <tbody id="inventory-table"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section id="purchase-orders-view" class="view">
+        <div class="section-heading section-heading-split">
+          <div><p class="eyebrow">Purchasing</p><h3>Order forms, send status, and incoming parts</h3></div>
+          <button class="secondary form-toggle" data-form-target="po-form-panel" data-open-label="Create PO" data-close-label="Hide Form">Create PO</button>
+        </div>
+        <div id="po-form-panel" class="panel form-panel hidden">
+          <form id="po-form" class="form-grid compact">
+            <label>Vendor<select id="po-vendor" required></select></label>
+            <label>Part<select id="po-part" required></select></label>
+            <label>Quantity Ordered<input id="po-quantity" type="number" min="1" required></label>
+            <label>ETA<input id="po-eta" type="date" required></label>
+            <label>Notes<input id="po-notes" type="text"></label>
+            <div class="form-actions"><button type="submit" class="primary">Create PO</button></div>
+          </form>
+        </div>
+        <div class="panel">
+          <div class="table-header"><h4>Open and closed orders</h4></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>PO #</th><th>Vendor</th><th>Part</th><th>Ordered</th><th>ETA</th><th>Status</th><th>Notes</th><th>Actions</th></tr></thead>
+              <tbody id="po-table"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section id="receiving-view" class="view">
+        <div class="section-heading">
+          <div><p class="eyebrow">Parts Received</p><h3>Orders that have been checked in</h3></div>
+        </div>
+        <div class="panel"><h4>Received order history</h4><div id="receiving-log" class="activity-list"></div></div>
+      </section>
+
+      <section id="jobs-view" class="view">
+        <div class="section-heading section-heading-split">
+          <div><p class="eyebrow">Jobs</p><h3>Create jobs and pull required parts</h3></div>
+          <button class="secondary form-toggle" data-form-target="job-form-panel" data-open-label="Add Job" data-close-label="Hide Form">Add Job</button>
+        </div>
+        <div id="job-form-panel" class="panel form-panel hidden">
+          <form id="job-form" class="form-grid compact">
+            <label>Job / Work Order<input id="job-number" type="text" required></label>
+            <label>Job Title<input id="job-title" type="text" required></label>
+            <label>Technician / Team<input id="job-tech" type="text" required></label>
+            <label>Notes<input id="job-notes" type="text"></label>
+            <div class="job-parts-builder">
+              <div class="table-header">
+                <h4>Required parts</h4>
+                <button type="button" id="job-add-part-row" class="ghost">Add Required Part</button>
+              </div>
+              <div id="job-required-parts"></div>
+            </div>
+            <div class="form-actions"><button type="submit" class="primary">Create Job</button></div>
+          </form>
+        </div>
+        <div class="panel"><h4>Active jobs</h4><div id="jobs-list" class="activity-list"></div></div>
+      </section>
+
+      <section id="warehouses-view" class="view">
+        <div class="section-heading section-heading-split">
+          <div><p class="eyebrow">Warehouses</p><h3>Manage locations</h3></div>
+          <button class="secondary form-toggle" data-form-target="warehouse-form-panel" data-open-label="Add Warehouse" data-close-label="Hide Form">Add Warehouse</button>
+        </div>
+        <div id="warehouse-form-panel" class="panel form-panel hidden">
+          <form id="warehouse-form" class="form-grid compact">
+            <label>Warehouse Name<input id="warehouse-name" type="text" required></label>
+            <label>Warehouse Code<input id="warehouse-code" type="text" maxlength="10" required></label>
+            <div class="form-actions">
+              <button type="submit" class="primary">Add Warehouse</button>
+              <button type="button" id="warehouse-form-clear" class="ghost">Clear</button>
+            </div>
+          </form>
+        </div>
+        <div class="panel">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Warehouse</th><th>Code</th><th>Status</th><th></th></tr></thead>
+              <tbody id="warehouse-table"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section id="vendors-view" class="view">
+        <div class="section-heading section-heading-split">
+          <div><p class="eyebrow">Vendors</p><h3>Supplier directory</h3></div>
+          <button class="secondary form-toggle" data-form-target="vendor-form-panel" data-open-label="Add Vendor" data-close-label="Hide Form">Add Vendor</button>
+        </div>
+        <div id="vendor-form-panel" class="panel form-panel hidden">
+          <form id="vendor-form" class="form-grid compact">
+            <label>Vendor Name<input id="vendor-name" type="text" required></label>
+            <label>Contact Name<input id="vendor-contact" type="text" required></label>
+            <label>Email<input id="vendor-email" type="email" required></label>
+            <label>Phone<input id="vendor-phone" type="text" required></label>
+            <label>Lead Time (days)<input id="vendor-lead-time" type="number" min="0" required></label>
+            <div class="form-actions">
+              <button type="submit" class="primary">Add Vendor</button>
+              <button type="button" id="vendor-form-clear" class="ghost">Clear</button>
+            </div>
+          </form>
+        </div>
+        <div class="panel">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Vendor</th><th>Contact</th><th>Email</th><th>Phone</th><th>Lead Time</th><th></th></tr></thead>
+              <tbody id="vendor-table"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <template id="empty-state-template">
+    <div class="empty-state"><h4>No records yet</h4><p>Use the form above to create the first record for this section.</p></div>
+  </template>
+
+  <script src="assets/app.js"></script>
+</body>
+</html>
