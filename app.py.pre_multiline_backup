@@ -88,24 +88,13 @@ def ensure_schema(db: sqlite3.Connection) -> None:
             is_active INTEGER NOT NULL DEFAULT 1
         );
 
-        CREATE TABLE IF NOT EXISTS order_form_templates (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            template_id TEXT NOT NULL UNIQUE,
-            name TEXT NOT NULL,
-            form_variant TEXT NOT NULL DEFAULT 'bathbuild',
-            notes TEXT NOT NULL DEFAULT '',
-            created_at TEXT NOT NULL,
-            updated_at TEXT NOT NULL DEFAULT ''
-        );
-
         CREATE TABLE IF NOT EXISTS vendors (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
             contact TEXT NOT NULL,
             email TEXT NOT NULL,
             phone TEXT NOT NULL,
-            lead_time_days INTEGER NOT NULL,
-            linked_template_id TEXT NOT NULL DEFAULT ''
+            lead_time_days INTEGER NOT NULL
         );
 
         CREATE TABLE IF NOT EXISTS parts (
@@ -128,46 +117,16 @@ def ensure_schema(db: sqlite3.Connection) -> None:
             warehouse_id INTEGER NOT NULL,
             po_number TEXT NOT NULL UNIQUE,
             vendor_id INTEGER NOT NULL,
-            template_id TEXT NOT NULL DEFAULT '',
-            eta TEXT NOT NULL DEFAULT '',
-            notes TEXT NOT NULL DEFAULT '',
+            part_id INTEGER NOT NULL,
+            quantity INTEGER NOT NULL,
+            received_quantity INTEGER NOT NULL DEFAULT 0,
+            eta TEXT NOT NULL,
+            notes TEXT NOT NULL,
             status TEXT NOT NULL,
             created_at TEXT NOT NULL,
-            updated_at TEXT NOT NULL DEFAULT '',
-            part_id INTEGER,
-            quantity INTEGER NOT NULL DEFAULT 0,
-            received_quantity INTEGER NOT NULL DEFAULT 0,
             FOREIGN KEY (warehouse_id) REFERENCES warehouses(id),
             FOREIGN KEY (vendor_id) REFERENCES vendors(id),
             FOREIGN KEY (part_id) REFERENCES parts(id)
-        );
-
-        CREATE TABLE IF NOT EXISTS purchase_order_lines (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            purchase_order_id INTEGER NOT NULL,
-            part_id INTEGER NOT NULL,
-            quantity_ordered INTEGER NOT NULL,
-            quantity_received INTEGER NOT NULL DEFAULT 0,
-            notes TEXT NOT NULL DEFAULT '',
-            created_at TEXT NOT NULL,
-            updated_at TEXT NOT NULL DEFAULT '',
-            FOREIGN KEY (purchase_order_id) REFERENCES purchase_orders(id) ON DELETE CASCADE,
-            FOREIGN KEY (part_id) REFERENCES parts(id)
-        );
-
-        CREATE TABLE IF NOT EXISTS order_list_items (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            warehouse_id INTEGER NOT NULL,
-            part_id INTEGER NOT NULL,
-            vendor_id INTEGER NOT NULL,
-            template_id TEXT NOT NULL DEFAULT '',
-            quantity_requested INTEGER NOT NULL,
-            notes TEXT NOT NULL DEFAULT '',
-            created_at TEXT NOT NULL,
-            updated_at TEXT NOT NULL DEFAULT '',
-            FOREIGN KEY (warehouse_id) REFERENCES warehouses(id),
-            FOREIGN KEY (part_id) REFERENCES parts(id),
-            FOREIGN KEY (vendor_id) REFERENCES vendors(id)
         );
 
         CREATE TABLE IF NOT EXISTS receiving_logs (
@@ -267,113 +226,10 @@ def ensure_optional_columns(db: sqlite3.Connection) -> None:
     if "scheduled_for" not in job_columns:
         db.execute("ALTER TABLE jobs ADD COLUMN scheduled_for TEXT NOT NULL DEFAULT ''")
 
-    order_form_template_columns = {row["name"] for row in db.execute("PRAGMA table_info(order_form_templates)")}
-    if not order_form_template_columns:
-        db.executescript(
-            """
-            CREATE TABLE IF NOT EXISTS order_form_templates (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                template_id TEXT NOT NULL UNIQUE,
-                name TEXT NOT NULL,
-                form_variant TEXT NOT NULL DEFAULT 'bathbuild',
-                notes TEXT NOT NULL DEFAULT '',
-                created_at TEXT NOT NULL,
-                updated_at TEXT NOT NULL DEFAULT ''
-            );
-            """
-        )
-    vendor_columns = {row["name"] for row in db.execute("PRAGMA table_info(vendors)")}
-    if "linked_template_id" not in vendor_columns:
-        db.execute("ALTER TABLE vendors ADD COLUMN linked_template_id TEXT NOT NULL DEFAULT ''")
-
-    purchase_order_columns = {row["name"] for row in db.execute("PRAGMA table_info(purchase_orders)")}
-    if "template_id" not in purchase_order_columns:
-        db.execute("ALTER TABLE purchase_orders ADD COLUMN template_id TEXT NOT NULL DEFAULT ''")
-    if "eta" not in purchase_order_columns:
-        db.execute("ALTER TABLE purchase_orders ADD COLUMN eta TEXT NOT NULL DEFAULT ''")
-    if "notes" not in purchase_order_columns:
-        db.execute("ALTER TABLE purchase_orders ADD COLUMN notes TEXT NOT NULL DEFAULT ''")
-    if "updated_at" not in purchase_order_columns:
-        db.execute("ALTER TABLE purchase_orders ADD COLUMN updated_at TEXT NOT NULL DEFAULT ''")
-
-    db.executescript(
-        """
-        CREATE TABLE IF NOT EXISTS purchase_order_lines (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            purchase_order_id INTEGER NOT NULL,
-            part_id INTEGER NOT NULL,
-            quantity_ordered INTEGER NOT NULL,
-            quantity_received INTEGER NOT NULL DEFAULT 0,
-            notes TEXT NOT NULL DEFAULT '',
-            created_at TEXT NOT NULL,
-            updated_at TEXT NOT NULL DEFAULT '',
-            FOREIGN KEY (purchase_order_id) REFERENCES purchase_orders(id) ON DELETE CASCADE,
-            FOREIGN KEY (part_id) REFERENCES parts(id)
-        );
-
-        CREATE TABLE IF NOT EXISTS order_list_items (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            warehouse_id INTEGER NOT NULL,
-            part_id INTEGER NOT NULL,
-            vendor_id INTEGER NOT NULL,
-            template_id TEXT NOT NULL DEFAULT '',
-            quantity_requested INTEGER NOT NULL,
-            notes TEXT NOT NULL DEFAULT '',
-            created_at TEXT NOT NULL,
-            updated_at TEXT NOT NULL DEFAULT '',
-            FOREIGN KEY (warehouse_id) REFERENCES warehouses(id),
-            FOREIGN KEY (part_id) REFERENCES parts(id),
-            FOREIGN KEY (vendor_id) REFERENCES vendors(id)
-        );
-        """
-    )
-
     db.execute("UPDATE jobs SET customer_name = 'Demo Customer ' || job_number WHERE TRIM(customer_name) = ''")
     db.execute("UPDATE jobs SET address = 'Address pending for ' || job_number WHERE TRIM(address) = ''")
     db.execute("UPDATE jobs SET scheduled_for = DATE(created_at) WHERE TRIM(scheduled_for) = ''")
-    db.execute("UPDATE purchase_orders SET updated_at = created_at WHERE TRIM(updated_at) = ''")
 
-    if db.execute("SELECT COUNT(*) AS count FROM order_form_templates").fetchone()["count"] == 0:
-        now_iso = datetime.now().isoformat()
-        db.executemany(
-            "INSERT INTO order_form_templates (template_id, name, form_variant, notes, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
-            [
-                ("aquaflow-standard", "AquaFlow Standard Requisition", "aquaflow", "Placeholder template for AquaFlow scanned form workflow", now_iso, now_iso),
-                ("bathbuild-standard", "BathBuild Standard Requisition", "bathbuild", "Placeholder template for BathBuild scanned form workflow", now_iso, now_iso),
-                ("universal-service", "Universal Service Order", "bathbuild", "General-purpose placeholder form for new vendors", now_iso, now_iso),
-            ],
-        )
-    db.execute("UPDATE vendors SET linked_template_id = 'aquaflow-standard' WHERE linked_template_id = '' AND name LIKE '%AquaFlow%'")
-    db.execute("UPDATE vendors SET linked_template_id = 'bathbuild-standard' WHERE linked_template_id = '' AND name LIKE '%BathBuild%'")
-
-    legacy_pos = db.execute(
-        """
-        SELECT id, part_id, quantity, received_quantity, created_at, updated_at, notes
-        FROM purchase_orders
-        WHERE part_id IS NOT NULL
-          AND id NOT IN (SELECT DISTINCT purchase_order_id FROM purchase_order_lines)
-        """
-    ).fetchall()
-    for po in legacy_pos:
-        db.execute(
-            """
-            INSERT INTO purchase_order_lines (
-                purchase_order_id, part_id, quantity_ordered, quantity_received, notes, created_at, updated_at
-            )
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                po["id"],
-                po["part_id"],
-                po["quantity"] or 0,
-                po["received_quantity"] or 0,
-                po["notes"] or '',
-                po["created_at"],
-                po["updated_at"] or po["created_at"],
-            ),
-        )
-
-    sync_purchase_order_rollups(db)
     db.commit()
 
 
@@ -393,9 +249,6 @@ def normalize_purchase_order_statuses(db: sqlite3.Connection) -> None:
 
 
 def refresh_job_status(db: sqlite3.Connection, job_id: int) -> None:
-    current_status = db.execute("SELECT status FROM jobs WHERE id = ?", (job_id,)).fetchone()
-    if current_status and current_status["status"] == "Completed":
-        return
     remaining_requirements = db.execute(
         """
         SELECT COUNT(*) AS count
@@ -425,57 +278,6 @@ def next_po_number(db: sqlite3.Connection) -> str:
     ).fetchone()
     max_po_number = row["max_po_number"] or 1000
     return f"PO-{max_po_number + 1}"
-
-
-def template_id_for_vendor_name(vendor_name: str) -> str:
-    return "aquaflow-standard" if "AquaFlow" in vendor_name else "bathbuild-standard"
-
-
-def template_record_for_id(db: sqlite3.Connection, template_id: str) -> dict | None:
-    if not template_id:
-        return None
-    row = db.execute("SELECT * FROM order_form_templates WHERE template_id = ?", (template_id,)).fetchone()
-    return dict(row) if row else None
-
-
-def template_id_for_vendor_id(db: sqlite3.Connection, vendor_id: int) -> str:
-    row = db.execute("SELECT name, linked_template_id FROM vendors WHERE id = ?", (vendor_id,)).fetchone()
-    if row is None:
-        return ""
-    linked = (row["linked_template_id"] or "").strip()
-    return linked or template_id_for_vendor_name(row["name"])
-
-
-def sync_purchase_order_rollups(db: sqlite3.Connection, po_id: int | None = None) -> None:
-    if po_id is None:
-        for row in db.execute("SELECT id FROM purchase_orders").fetchall():
-            sync_purchase_order_rollups(db, int(row["id"]))
-        return
-
-    summary = db.execute(
-        """
-        SELECT COALESCE(SUM(quantity_ordered), 0) AS quantity_ordered,
-               COALESCE(SUM(quantity_received), 0) AS quantity_received,
-               MIN(part_id) AS first_part_id
-        FROM purchase_order_lines
-        WHERE purchase_order_id = ?
-        """,
-        (po_id,),
-    ).fetchone()
-    db.execute(
-        """
-        UPDATE purchase_orders
-        SET part_id = ?, quantity = ?, received_quantity = ?, updated_at = ?
-        WHERE id = ?
-        """,
-        (
-            summary["first_part_id"],
-            int(summary["quantity_ordered"] or 0),
-            int(summary["quantity_received"] or 0),
-            datetime.now().isoformat(),
-            po_id,
-        ),
-    )
 
 
 def demo_catalog() -> list[dict]:
@@ -645,14 +447,12 @@ def demo_catalog() -> list[dict]:
 def seed_database(db: sqlite3.Connection) -> None:
     db.executescript(
         """
-        DELETE FROM order_list_items;
         DELETE FROM reorder_requests;
         DELETE FROM job_part_requirements;
         DELETE FROM jobs;
         DELETE FROM usage_logs;
         DELETE FROM receiving_logs;
         DELETE FROM stock_transfers;
-        DELETE FROM purchase_order_lines;
         DELETE FROM purchase_orders;
         DELETE FROM parts;
         DELETE FROM vendors;
@@ -668,23 +468,12 @@ def seed_database(db: sqlite3.Connection) -> None:
     ]
     db.executemany("INSERT INTO warehouses (name, code, is_active) VALUES (?, ?, 1)", warehouses)
 
-    now_iso = datetime.now().isoformat()
-    templates = [
-        ("aquaflow-standard", "AquaFlow Standard Requisition", "aquaflow", "Placeholder template for AquaFlow scanned form workflow", now_iso, now_iso),
-        ("bathbuild-standard", "BathBuild Standard Requisition", "bathbuild", "Placeholder template for BathBuild scanned form workflow", now_iso, now_iso),
-        ("universal-service", "Universal Service Order", "bathbuild", "General-purpose placeholder form for new vendors", now_iso, now_iso),
-    ]
-    db.executemany(
-        "INSERT INTO order_form_templates (template_id, name, form_variant, notes, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
-        templates,
-    )
-
     vendors = [
-        ("AquaFlow Plumbing Supply", "Jordan Ellis", "orders@aquaflow.example", "555-0105", 5, "aquaflow-standard"),
-        ("BathBuild Distributors", "Avery Brooks", "sales@bathbuild.example", "555-0138", 3, "bathbuild-standard"),
+        ("AquaFlow Plumbing Supply", "Jordan Ellis", "orders@aquaflow.example", "555-0105", 5),
+        ("BathBuild Distributors", "Avery Brooks", "sales@bathbuild.example", "555-0138", 3),
     ]
     db.executemany(
-        "INSERT INTO vendors (name, contact, email, phone, lead_time_days, linked_template_id) VALUES (?, ?, ?, ?, ?, ?)",
+        "INSERT INTO vendors (name, contact, email, phone, lead_time_days) VALUES (?, ?, ?, ?, ?)",
         vendors,
     )
 
@@ -959,7 +748,6 @@ def seed_database(db: sqlite3.Connection) -> None:
                     (now - timedelta(days=history_index + 2, hours=warehouse_index + history_index)).isoformat(),
                 ),
             )
-    ensure_optional_columns(db)
     db.commit()
 
 
@@ -981,89 +769,14 @@ def currentWarehouseIs(warehouse_id: int) -> bool:
     return bool(requested) and int(requested) == warehouse_id
 
 
-def load_purchase_order_lines(db: sqlite3.Connection, po_ids: list[int]) -> dict[int, list[dict]]:
-    if not po_ids:
-        return {}
-    placeholders = ",".join("?" for _ in po_ids)
-    line_rows = [
-        dict(row)
-        for row in db.execute(
-            f"""
-            SELECT purchase_order_lines.*, parts.part_number, parts.description, parts.category, parts.unit_cost
-            FROM purchase_order_lines
-            JOIN parts ON parts.id = purchase_order_lines.part_id
-            WHERE purchase_order_lines.purchase_order_id IN ({placeholders})
-            ORDER BY purchase_order_lines.purchase_order_id, parts.part_number
-            """,
-            tuple(po_ids),
-        ).fetchall()
-    ]
-    grouped: dict[int, list[dict]] = {}
-    for line in line_rows:
-        grouped.setdefault(int(line["purchase_order_id"]), []).append(line)
-    return grouped
-
-
-def purchase_orders_for_warehouse(db: sqlite3.Connection, warehouse_id: int) -> list[dict]:
-    purchase_orders = [
-        dict(row)
-        for row in db.execute(
-            """
-            SELECT purchase_orders.*, vendors.name AS vendor_name,
-                   warehouses.name AS warehouse_name, warehouses.code AS warehouse_code,
-                   COALESCE(SUM(purchase_order_lines.quantity_ordered), 0) AS total_ordered,
-                   COALESCE(SUM(purchase_order_lines.quantity_received), 0) AS total_received,
-                   COUNT(purchase_order_lines.id) AS line_count
-            FROM purchase_orders
-            JOIN vendors ON vendors.id = purchase_orders.vendor_id
-            JOIN warehouses ON warehouses.id = purchase_orders.warehouse_id
-            LEFT JOIN purchase_order_lines ON purchase_order_lines.purchase_order_id = purchase_orders.id
-            WHERE purchase_orders.warehouse_id = ?
-            GROUP BY purchase_orders.id
-            ORDER BY datetime(purchase_orders.created_at) DESC
-            """,
-            (warehouse_id,),
-        ).fetchall()
-    ]
-    line_map = load_purchase_order_lines(db, [int(po["id"]) for po in purchase_orders])
-    for po in purchase_orders:
-        lines = line_map.get(int(po["id"]), [])
-        po["lines"] = lines
-        po["total_ordered"] = int(po.get("total_ordered") or 0)
-        po["total_received"] = int(po.get("total_received") or 0)
-        po["outstanding_quantity"] = sum(max(int(line["quantity_ordered"]) - int(line["quantity_received"]), 0) for line in lines)
-    return purchase_orders
-
-
-def order_list_items_for_warehouse(db: sqlite3.Connection, warehouse_id: int) -> list[dict]:
-    return [
-        dict(row)
-        for row in db.execute(
-            """
-            SELECT order_list_items.*, parts.part_number, parts.description, parts.category, parts.stock,
-                   vendors.name AS vendor_name, warehouses.code AS warehouse_code
-            FROM order_list_items
-            JOIN parts ON parts.id = order_list_items.part_id
-            JOIN vendors ON vendors.id = order_list_items.vendor_id
-            JOIN warehouses ON warehouses.id = order_list_items.warehouse_id
-            WHERE order_list_items.warehouse_id = ?
-            ORDER BY datetime(order_list_items.created_at) DESC, parts.part_number
-            """,
-            (warehouse_id,),
-        ).fetchall()
-    ]
-
-
 def bootstrap_payload(warehouse_id: int) -> dict:
-    db = get_db()
     current = rows("SELECT * FROM warehouses WHERE id = ?", (warehouse_id,))
     return {
         "warehouses": rows("SELECT * FROM warehouses ORDER BY name"),
         "activeWarehouses": rows("SELECT * FROM warehouses WHERE is_active = 1 ORDER BY name"),
         "selectedWarehouseId": warehouse_id,
         "selectedWarehouse": current[0] if current else None,
-        "vendors": rows("SELECT vendors.*, COALESCE(order_form_templates.name, '') AS linked_template_name FROM vendors LEFT JOIN order_form_templates ON order_form_templates.template_id = vendors.linked_template_id ORDER BY vendors.name"),
-        "orderFormTemplates": rows("SELECT * FROM order_form_templates ORDER BY name"),
+        "vendors": rows("SELECT * FROM vendors ORDER BY name"),
         "parts": rows(
             """
             SELECT parts.*, vendors.name AS vendor_name, warehouses.name AS warehouse_name, warehouses.code AS warehouse_code
@@ -1075,8 +788,19 @@ def bootstrap_payload(warehouse_id: int) -> dict:
             """,
             (warehouse_id,),
         ),
-        "orderListItems": order_list_items_for_warehouse(db, warehouse_id),
-        "purchaseOrders": purchase_orders_for_warehouse(db, warehouse_id),
+        "purchaseOrders": rows(
+            """
+            SELECT purchase_orders.*, vendors.name AS vendor_name, parts.part_number, parts.description,
+                   warehouses.name AS warehouse_name, warehouses.code AS warehouse_code
+            FROM purchase_orders
+            JOIN vendors ON vendors.id = purchase_orders.vendor_id
+            JOIN parts ON parts.id = purchase_orders.part_id
+            JOIN warehouses ON warehouses.id = purchase_orders.warehouse_id
+            WHERE purchase_orders.warehouse_id = ?
+            ORDER BY datetime(purchase_orders.created_at) DESC
+            """,
+            (warehouse_id,),
+        ),
         "receivingLogs": rows(
             """
             SELECT receiving_logs.*, purchase_orders.po_number, parts.part_number, purchase_orders.warehouse_id
@@ -1091,15 +815,7 @@ def bootstrap_payload(warehouse_id: int) -> dict:
         "jobs": rows(
             """
             SELECT * FROM jobs
-            WHERE warehouse_id = ? AND status != 'Completed'
-            ORDER BY CASE WHEN status = 'Ready to Go' THEN 0 ELSE 1 END, datetime(created_at) DESC
-            """,
-            (warehouse_id,),
-        ),
-        "completedJobs": rows(
-            """
-            SELECT * FROM jobs
-            WHERE warehouse_id = ? AND status = 'Completed'
+            WHERE warehouse_id = ?
             ORDER BY datetime(created_at) DESC
             """,
             (warehouse_id,),
@@ -1111,7 +827,7 @@ def bootstrap_payload(warehouse_id: int) -> dict:
             JOIN jobs ON jobs.id = job_part_requirements.job_id
             JOIN parts ON parts.id = job_part_requirements.part_id
             WHERE jobs.warehouse_id = ?
-            ORDER BY CASE WHEN jobs.status = 'Ready to Go' THEN 0 ELSE 1 END, jobs.created_at DESC, parts.part_number
+            ORDER BY jobs.created_at DESC, parts.part_number
             """,
             (warehouse_id,),
         ),
@@ -1164,60 +880,22 @@ def reorder_form_context(reorder_id: int) -> dict | None:
     if row is None:
         return None
     data = dict(row)
-    template = template_record_for_id(db, data.get("linked_template_id") or template_id_for_vendor_name(data["vendor_name"]))
-    data["template_name"] = template["name"] if template else f"{data['vendor_name']} Template"
-    data["form_variant"] = template["form_variant"] if template else reorder_form_variant(data["vendor_name"])
+    data["form_variant"] = reorder_form_variant(data["vendor_name"])
     data["request_date"] = datetime.fromisoformat(data["created_at"]).strftime("%B %d, %Y")
     data["line_total"] = round(data["quantity"] * data["unit_cost"], 2)
-    data["mock_form_name"] = data["template_name"]
-    data["line_items"] = [{
-        "part_number": data["part_number"],
-        "description": data["description"],
-        "category": data["category"],
-        "quantity_ordered": data["quantity"],
-        "unit_cost": data["unit_cost"],
-        "line_total": data["line_total"],
-    }]
-    data["plain_text_order"] = build_plain_text_order(data)
+    data["mock_form_name"] = f"{data['vendor_name']} Standard Supply Requisition"
     return data
-
-
-def build_plain_text_order(order: dict) -> str:
-    lines = order.get("line_items") or []
-    if not lines and order.get("part_number"):
-        lines = [{
-            "part_number": order.get("part_number", ""),
-            "description": order.get("description", ""),
-            "category": order.get("category", ""),
-            "quantity_ordered": order.get("quantity", 0),
-        }]
-    header = [
-        f"Vendor: {order.get('vendor_name', '')}",
-        f"Warehouse: {order.get('warehouse_name', '')} ({order.get('warehouse_code', '')})",
-        f"Request Date: {order.get('request_date', '')}",
-        f"Status: {order.get('status', '')}",
-        "",
-        "Line Items:",
-    ]
-    body = [
-        f"- {line.get('part_number', '')} | {line.get('description', '')} | Qty {line.get('quantity_ordered', 0)}"
-        for line in lines
-    ]
-    footer = [
-        "",
-        f"Reason: {order.get('reason') or 'Low stock reorder'}",
-        f"Prepared from ShopFlow for warehouse {order.get('warehouse_code', '')}."
-    ]
-    return "\n".join(header + body + footer)
 
 
 def purchase_order_form_context(po_id: int) -> dict | None:
     db = get_db()
     row = db.execute(
         """
-        SELECT purchase_orders.*, vendors.name AS vendor_name, vendors.contact AS vendor_contact, vendors.phone AS vendor_phone,
+        SELECT purchase_orders.*, parts.part_number, parts.description, parts.category, parts.unit_cost,
+               vendors.name AS vendor_name, vendors.contact AS vendor_contact, vendors.phone AS vendor_phone,
                warehouses.name AS warehouse_name, warehouses.code AS warehouse_code
         FROM purchase_orders
+        JOIN parts ON parts.id = purchase_orders.part_id
         JOIN vendors ON vendors.id = purchase_orders.vendor_id
         JOIN warehouses ON warehouses.id = purchase_orders.warehouse_id
         WHERE purchase_orders.id = ?
@@ -1227,29 +905,16 @@ def purchase_order_form_context(po_id: int) -> dict | None:
     if row is None:
         return None
     data = dict(row)
-    lines = load_purchase_order_lines(db, [po_id]).get(po_id, [])
-    for line in lines:
-        line["line_total"] = round(float(line["unit_cost"]) * int(line["quantity_ordered"]), 2)
-    data["line_items"] = lines
-    template = template_record_for_id(db, data.get("template_id") or template_id_for_vendor_name(data["vendor_name"]))
-    data["template_name"] = template["name"] if template else f"{data['vendor_name']} Template"
-    data["form_variant"] = template["form_variant"] if template else reorder_form_variant(data["vendor_name"])
+    data["form_variant"] = reorder_form_variant(data["vendor_name"])
     data["request_date"] = datetime.fromisoformat(data["created_at"]).strftime("%B %d, %Y")
-    data["mock_form_name"] = data["template_name"]
-    data["grand_total"] = round(sum(line["line_total"] for line in lines), 2)
-    data["reason"] = data.get("notes", "")
-    data["plain_text_order"] = build_plain_text_order(data)
+    data["line_total"] = round(data["quantity"] * data["unit_cost"], 2)
+    data["mock_form_name"] = f"{data['vendor_name']} Standard Supply Requisition"
     return data
 
 
 @app.get("/")
 def index() -> str:
     return render_template("index.html")
-
-
-@app.get("/stress-checklist")
-def stress_checklist() -> str:
-    return render_template("stress_checklist.html")
 
 
 @app.get("/reorders/<int:reorder_id>/form")
@@ -1283,81 +948,24 @@ def save_vendor():
         payload["email"].strip(),
         payload["phone"].strip(),
         int(payload["leadTimeDays"]),
-        (payload.get("linkedTemplateId") or "").strip(),
     )
     vendor_id = payload.get("id")
     if vendor_id:
         db.execute(
             """
             UPDATE vendors
-            SET name = ?, contact = ?, email = ?, phone = ?, lead_time_days = ?, linked_template_id = ?
+            SET name = ?, contact = ?, email = ?, phone = ?, lead_time_days = ?
             WHERE id = ?
             """,
             (*fields, int(vendor_id)),
         )
     else:
         db.execute(
-            "INSERT INTO vendors (name, contact, email, phone, lead_time_days, linked_template_id) VALUES (?, ?, ?, ?, ?, ?)",
+            "INSERT INTO vendors (name, contact, email, phone, lead_time_days) VALUES (?, ?, ?, ?, ?)",
             fields,
         )
     db.commit()
     return jsonify(bootstrap_payload(selected_warehouse_id()))
-
-
-@app.post("/api/order-form-templates")
-def save_order_form_template():
-    payload = request.get_json(force=True)
-    warehouse_id = int(payload["warehouseId"])
-    db = get_db()
-    fields = (
-        payload["templateId"].strip(),
-        payload["name"].strip(),
-        payload.get("formVariant", "bathbuild").strip() or "bathbuild",
-        payload.get("notes", "").strip(),
-    )
-    template_row_id = payload.get("id")
-    timestamp = datetime.now().isoformat()
-    try:
-        if template_row_id:
-            db.execute(
-                """
-                UPDATE order_form_templates
-                SET template_id = ?, name = ?, form_variant = ?, notes = ?, updated_at = ?
-                WHERE id = ?
-                """,
-                (*fields, timestamp, int(template_row_id)),
-            )
-        else:
-            db.execute(
-                """
-                INSERT INTO order_form_templates (template_id, name, form_variant, notes, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?)
-                """,
-                (*fields, timestamp, timestamp),
-            )
-    except sqlite3.IntegrityError:
-        return jsonify({"error": "That order form ID already exists."}), 400
-    db.commit()
-    return jsonify(bootstrap_payload(warehouse_id))
-
-
-@app.post("/api/order-form-templates/<int:template_row_id>/delete")
-def delete_order_form_template(template_row_id: int):
-    payload = request.get_json(force=True)
-    warehouse_id = int(payload["warehouseId"])
-    db = get_db()
-    template = db.execute("SELECT * FROM order_form_templates WHERE id = ?", (template_row_id,)).fetchone()
-    if template is None:
-        return jsonify({"error": "Order form template not found."}), 404
-    template_id = template["template_id"]
-    vendor_count = db.execute("SELECT COUNT(*) AS count FROM vendors WHERE linked_template_id = ?", (template_id,)).fetchone()["count"]
-    po_count = db.execute("SELECT COUNT(*) AS count FROM purchase_orders WHERE template_id = ?", (template_id,)).fetchone()["count"]
-    order_list_count = db.execute("SELECT COUNT(*) AS count FROM order_list_items WHERE template_id = ?", (template_id,)).fetchone()["count"]
-    if vendor_count or po_count or order_list_count:
-        return jsonify({"error": "This order form is in use and cannot be deleted."}), 400
-    db.execute("DELETE FROM order_form_templates WHERE id = ?", (template_row_id,))
-    db.commit()
-    return jsonify(bootstrap_payload(warehouse_id))
 
 
 @app.post("/api/vendors/<int:vendor_id>/delete")
@@ -1367,8 +975,7 @@ def delete_vendor(vendor_id: int):
     db = get_db()
     part_count = db.execute("SELECT COUNT(*) AS count FROM parts WHERE vendor_id = ?", (vendor_id,)).fetchone()["count"]
     po_count = db.execute("SELECT COUNT(*) AS count FROM purchase_orders WHERE vendor_id = ?", (vendor_id,)).fetchone()["count"]
-    order_list_count = db.execute("SELECT COUNT(*) AS count FROM order_list_items WHERE vendor_id = ?", (vendor_id,)).fetchone()["count"]
-    if part_count or po_count or order_list_count:
+    if part_count or po_count:
         return jsonify({"error": "This vendor is in use and cannot be deleted."}), 400
 
     db.execute("DELETE FROM vendors WHERE id = ?", (vendor_id,))
@@ -1430,25 +1037,15 @@ def archive_warehouse(warehouse_id: int):
 def save_part():
     payload = request.get_json(force=True)
     db = get_db()
-    stock = int(payload["stock"])
-    reorder_point = int(payload["reorderPoint"])
-    unit_cost = float(payload["unitCost"])
-    if stock < 0:
-        return jsonify({"error": "Current stock cannot be negative."}), 400
-    if reorder_point < 0:
-        return jsonify({"error": "Reorder point cannot be negative."}), 400
-    if unit_cost < 0:
-        return jsonify({"error": "Unit cost cannot be negative."}), 400
-
     fields = (
         int(payload["warehouseId"]),
         payload["partNumber"].strip(),
         payload["description"].strip(),
         payload["category"].strip(),
-        stock,
-        reorder_point,
+        int(payload["stock"]),
+        int(payload["reorderPoint"]),
         int(payload["vendorId"]),
-        unit_cost,
+        float(payload["unitCost"]),
     )
     part_id = payload.get("id")
     try:
@@ -1495,214 +1092,27 @@ def delete_part(part_id: int):
 @app.post("/api/purchase-orders")
 def create_purchase_order():
     payload = request.get_json(force=True)
-    warehouse_id = int(payload["warehouseId"])
-    vendor_id = int(payload["vendorId"])
-    part_id = int(payload["partId"])
-    quantity = int(payload["quantity"])
-    if quantity <= 0:
-        return jsonify({"error": "Quantity must be at least 1."}), 400
-
     db = get_db()
-    timestamp = datetime.now().isoformat()
     po_number = next_po_number(db)
-    po_cursor = db.execute(
+    db.execute(
         """
         INSERT INTO purchase_orders
-            (warehouse_id, po_number, vendor_id, template_id, eta, notes, status, created_at, updated_at, part_id, quantity, received_quantity)
-        VALUES (?, ?, ?, ?, ?, ?, 'Email Pending', ?, ?, ?, ?, 0)
+            (warehouse_id, po_number, vendor_id, part_id, quantity, received_quantity, eta, notes, status, created_at)
+        VALUES (?, ?, ?, ?, ?, 0, ?, ?, 'Email Pending', ?)
         """,
         (
-            warehouse_id,
+            int(payload["warehouseId"]),
             po_number,
-            vendor_id,
-            template_id_for_vendor_id(db, vendor_id),
-            payload.get("eta", ""),
+            int(payload["vendorId"]),
+            int(payload["partId"]),
+            int(payload["quantity"]),
+            payload["eta"],
             payload.get("notes", "").strip(),
-            timestamp,
-            timestamp,
-            part_id,
-            quantity,
+            datetime.now().isoformat(),
         ),
     )
-    po_id = int(po_cursor.lastrowid)
-    db.execute(
-        """
-        INSERT INTO purchase_order_lines (
-            purchase_order_id, part_id, quantity_ordered, quantity_received, notes, created_at, updated_at
-        )
-        VALUES (?, ?, ?, 0, ?, ?, ?)
-        """,
-        (po_id, part_id, quantity, payload.get("notes", "").strip(), timestamp, timestamp),
-    )
-    sync_purchase_order_rollups(db, po_id)
     db.commit()
-    return jsonify({"state": bootstrap_payload(warehouse_id), "createdPoId": po_id})
-
-
-@app.post("/api/order-list")
-def add_to_order_list():
-    payload = request.get_json(force=True)
-    warehouse_id = int(payload["warehouseId"])
-    part_id = int(payload["partId"])
-    quantity = int(payload["quantity"])
-    notes = payload.get("notes", "").strip()
-    if quantity <= 0:
-        return jsonify({"error": "Quantity must be at least 1."}), 400
-
-    db = get_db()
-    part = db.execute(
-        """
-        SELECT parts.*, vendors.name AS vendor_name
-        FROM parts
-        JOIN vendors ON vendors.id = parts.vendor_id
-        WHERE parts.id = ? AND parts.warehouse_id = ?
-        """,
-        (part_id, warehouse_id),
-    ).fetchone()
-    if part is None:
-        return jsonify({"error": "Part not found in this warehouse."}), 404
-
-    existing = db.execute(
-        "SELECT * FROM order_list_items WHERE warehouse_id = ? AND part_id = ?",
-        (warehouse_id, part_id),
-    ).fetchone()
-    timestamp = datetime.now().isoformat()
-    template_id = template_id_for_vendor_name(part["vendor_name"])
-    if existing:
-        db.execute(
-            """
-            UPDATE order_list_items
-            SET quantity_requested = ?, notes = ?, vendor_id = ?, template_id = ?, updated_at = ?
-            WHERE id = ?
-            """,
-            (quantity, notes or existing["notes"], int(part["vendor_id"]), template_id, timestamp, int(existing["id"])),
-        )
-    else:
-        db.execute(
-            """
-            INSERT INTO order_list_items (
-                warehouse_id, part_id, vendor_id, template_id, quantity_requested, notes, created_at, updated_at
-            )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (warehouse_id, part_id, int(part["vendor_id"]), template_id, quantity, notes, timestamp, timestamp),
-        )
-    db.commit()
-    return jsonify(bootstrap_payload(warehouse_id))
-
-
-@app.post("/api/order-list/<int:item_id>")
-def update_order_list_item(item_id: int):
-    payload = request.get_json(force=True)
-    warehouse_id = int(payload["warehouseId"])
-    quantity = int(payload["quantity"])
-    if quantity <= 0:
-        return jsonify({"error": "Quantity must be at least 1."}), 400
-    db = get_db()
-    db.execute(
-        "UPDATE order_list_items SET quantity_requested = ?, notes = ?, updated_at = ? WHERE id = ? AND warehouse_id = ?",
-        (quantity, payload.get("notes", "").strip(), datetime.now().isoformat(), item_id, warehouse_id),
-    )
-    db.commit()
-    return jsonify(bootstrap_payload(warehouse_id))
-
-
-@app.post("/api/order-list/<int:item_id>/delete")
-def delete_order_list_item(item_id: int):
-    payload = request.get_json(force=True)
-    warehouse_id = int(payload["warehouseId"])
-    db = get_db()
-    db.execute("DELETE FROM order_list_items WHERE id = ? AND warehouse_id = ?", (item_id, warehouse_id))
-    db.commit()
-    return jsonify(bootstrap_payload(warehouse_id))
-
-
-@app.post("/api/order-list/clear")
-def clear_order_list():
-    payload = request.get_json(force=True)
-    warehouse_id = int(payload["warehouseId"])
-    db = get_db()
-    db.execute("DELETE FROM order_list_items WHERE warehouse_id = ?", (warehouse_id,))
-    db.commit()
-    return jsonify(bootstrap_payload(warehouse_id))
-
-
-@app.post("/api/order-list/generate")
-def generate_grouped_purchase_orders():
-    payload = request.get_json(force=True)
-    warehouse_id = int(payload["warehouseId"])
-    db = get_db()
-    items = db.execute(
-        """
-        SELECT order_list_items.*, parts.part_number, parts.description, vendors.name AS vendor_name
-        FROM order_list_items
-        JOIN parts ON parts.id = order_list_items.part_id
-        JOIN vendors ON vendors.id = order_list_items.vendor_id
-        WHERE order_list_items.warehouse_id = ?
-        ORDER BY order_list_items.vendor_id, order_list_items.template_id, order_list_items.id
-        """,
-        (warehouse_id,),
-    ).fetchall()
-    if not items:
-        return jsonify({"error": "Add parts to the order list before generating orders."}), 400
-
-    grouped = {}
-    for item in items:
-        key = (int(item["vendor_id"]), item["template_id"] or "", int(item["warehouse_id"]))
-        grouped.setdefault(key, []).append(item)
-
-    timestamp = datetime.now().isoformat()
-    created_summary = []
-    for (vendor_id, template_id, item_warehouse_id), grouped_items in grouped.items():
-        po_number = next_po_number(db)
-        eta_value = (datetime.now() + timedelta(days=7)).date().isoformat()
-        po_cursor = db.execute(
-            """
-            INSERT INTO purchase_orders
-                (warehouse_id, po_number, vendor_id, template_id, eta, notes, status, created_at, updated_at, part_id, quantity, received_quantity)
-            VALUES (?, ?, ?, ?, ?, ?, 'Email Pending', ?, ?, ?, ?, 0)
-            """,
-            (
-                item_warehouse_id,
-                po_number,
-                vendor_id,
-                template_id,
-                eta_value,
-                payload.get("notes", "").strip() or "Generated from grouped order list",
-                timestamp,
-                timestamp,
-                int(grouped_items[0]["part_id"]),
-                sum(int(item["quantity_requested"]) for item in grouped_items),
-            ),
-        )
-        po_id = int(po_cursor.lastrowid)
-        line_items = []
-        for item in grouped_items:
-            db.execute(
-                """
-                INSERT INTO purchase_order_lines (
-                    purchase_order_id, part_id, quantity_ordered, quantity_received, notes, created_at, updated_at
-                )
-                VALUES (?, ?, ?, 0, ?, ?, ?)
-                """,
-                (po_id, int(item["part_id"]), int(item["quantity_requested"]), item["notes"] or "", timestamp, timestamp),
-            )
-            line_items.append({
-                "partNumber": item["part_number"],
-                "description": item["description"],
-                "quantityOrdered": int(item["quantity_requested"]),
-            })
-        sync_purchase_order_rollups(db, po_id)
-        created_summary.append({
-            "id": po_id,
-            "poNumber": po_number,
-            "vendorName": grouped_items[0]["vendor_name"],
-            "lineItems": line_items,
-        })
-
-    db.execute("DELETE FROM order_list_items WHERE warehouse_id = ?", (warehouse_id,))
-    db.commit()
-    return jsonify({"state": bootstrap_payload(warehouse_id), "createdPurchaseOrders": created_summary})
+    return jsonify(bootstrap_payload(int(payload["warehouseId"])))
 
 
 @app.post("/api/purchase-orders/<int:po_id>/status")
@@ -1710,12 +1120,12 @@ def update_purchase_order_status(po_id: int):
     payload = request.get_json(force=True)
     warehouse_id = int(payload["warehouseId"])
     status = payload["status"].strip()
-    allowed = {"Email Pending", "Waiting for Part", "Partial Received", "Received"}
+    allowed = {"Email Pending", "Waiting for Part", "Received"}
     if status not in allowed:
         return jsonify({"error": "Invalid purchase order status."}), 400
 
     db = get_db()
-    db.execute("UPDATE purchase_orders SET status = ?, updated_at = ? WHERE id = ?", (status, datetime.now().isoformat(), po_id))
+    db.execute("UPDATE purchase_orders SET status = ? WHERE id = ?", (status, po_id))
     db.commit()
     return jsonify(bootstrap_payload(warehouse_id))
 
@@ -1731,50 +1141,36 @@ def receive_purchase_order(po_id: int):
     if po is None:
         return jsonify({"error": "Purchase order not found."}), 404
 
-    lines = db.execute("SELECT * FROM purchase_order_lines WHERE purchase_order_id = ? ORDER BY id", (po_id,)).fetchall()
-    if not lines:
-        return jsonify({"error": "This purchase order has no line items."}), 400
+    remaining = po["quantity"] - po["received_quantity"]
+    if remaining <= 0:
+        return jsonify({"error": "This purchase order has already been received."}), 400
 
-    line_receipts = payload.get("lineReceipts") or {}
-    if not isinstance(line_receipts, dict):
-        return jsonify({"error": "Invalid receiving payload."}), 400
-
-    receipt_rows = []
-    for line in lines:
-        amount = int(line_receipts.get(str(line["id"]), line_receipts.get(line["id"], 0)) or 0)
-        if amount < 0:
-            return jsonify({"error": "Received quantities cannot be negative."}), 400
-        if amount > 0:
-            receipt_rows.append((line, amount))
-    if not receipt_rows:
-        return jsonify({"error": "Enter a received quantity greater than 0 for at least one line."}), 400
-
-    timestamp = datetime.now().isoformat()
-    for line, amount in receipt_rows:
-        db.execute("UPDATE parts SET stock = stock + ? WHERE id = ?", (amount, int(line["part_id"])))
-        db.execute(
-            "INSERT INTO receiving_logs (po_id, part_id, quantity, received_by, notes, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-            (po_id, int(line["part_id"]), amount, payload.get("receivedBy", "").strip() or "Inventory", payload.get("notes", "").strip() or "Checked in from PO tab", timestamp),
-        )
-        db.execute(
-            "UPDATE purchase_order_lines SET quantity_received = quantity_received + ?, updated_at = ? WHERE id = ?",
-            (amount, timestamp, int(line["id"])),
-        )
-
-    sync_purchase_order_rollups(db, po_id)
-    summary = db.execute(
+    quantity = int(payload.get("quantity") or remaining)
+    if quantity <= 0:
+        return jsonify({"error": "Enter a received quantity greater than 0."}), 400
+    db.execute("UPDATE parts SET stock = stock + ? WHERE id = ?", (quantity, po["part_id"]))
+    db.execute(
         """
-        SELECT SUM(CASE WHEN quantity_received >= quantity_ordered THEN 1 ELSE 0 END) AS complete_lines,
-               COUNT(*) AS total_lines
-        FROM purchase_order_lines
-        WHERE purchase_order_id = ?
+        INSERT INTO receiving_logs (po_id, part_id, quantity, received_by, notes, created_at)
+        VALUES (?, ?, ?, ?, ?, ?)
         """,
-        (po_id,),
-    ).fetchone()
-    status = "Received" if int(summary["complete_lines"] or 0) == int(summary["total_lines"] or 0) else "Partial Received"
-    db.execute("UPDATE purchase_orders SET status = ?, updated_at = ? WHERE id = ?", (status, timestamp, po_id))
+        (
+            po["id"],
+            po["part_id"],
+            quantity,
+            payload.get("receivedBy", "").strip() or "Inventory",
+            payload.get("notes", "").strip() or "Received from PO workflow",
+            datetime.now().isoformat(),
+        ),
+    )
+    received_total = po["received_quantity"] + quantity
+    status = "Received" if received_total >= po["quantity"] else "Partial Received"
+    db.execute(
+        "UPDATE purchase_orders SET received_quantity = ?, status = ? WHERE id = ?",
+        (received_total, status, po_id),
+    )
     db.commit()
-    return jsonify(bootstrap_payload(int(po["warehouse_id"])))
+    return jsonify(bootstrap_payload(po["warehouse_id"]))
 
 
 @app.post("/api/reorders")
@@ -1818,7 +1214,47 @@ def create_reorder_request():
 
 @app.post("/api/purchase-orders/order-more")
 def create_order_more_purchase_order():
-    return add_to_order_list()
+    payload = request.get_json(force=True)
+    warehouse_id = int(payload["warehouseId"])
+    quantity = int(payload["quantity"])
+    if quantity <= 0:
+        return jsonify({"error": "Quantity must be at least 1."}), 400
+
+    db = get_db()
+    part = db.execute(
+        """
+        SELECT parts.*, vendors.id AS resolved_vendor_id
+        FROM parts
+        JOIN vendors ON vendors.id = parts.vendor_id
+        WHERE parts.id = ? AND parts.warehouse_id = ?
+        """,
+        (int(payload["partId"]), warehouse_id),
+    ).fetchone()
+    if part is None:
+        return jsonify({"error": "Part not found in this warehouse."}), 404
+
+    cursor = db.execute(
+        """
+        INSERT INTO purchase_orders
+            (warehouse_id, po_number, vendor_id, part_id, quantity, received_quantity, eta, notes, status, created_at)
+        VALUES (?, ?, ?, ?, ?, 0, ?, ?, 'Email Pending', ?)
+        """,
+        (
+            warehouse_id,
+            next_po_number(db),
+            part["resolved_vendor_id"],
+            part["id"],
+            quantity,
+            (datetime.now() + timedelta(days=7)).date().isoformat(),
+            payload.get("notes", "").strip() or f"Low stock reorder for {part['part_number']}",
+            datetime.now().isoformat(),
+        ),
+    )
+    db.commit()
+    return jsonify({
+        "state": bootstrap_payload(warehouse_id),
+        "createdPoId": int(cursor.lastrowid),
+    })
 
 
 @app.post("/api/reorders/<int:reorder_id>/sent")
@@ -1841,39 +1277,27 @@ def mark_reorder_sent(reorder_id: int):
     if reorder["status"] == "Sent to PO":
         return jsonify({"error": "That reorder has already been moved to purchase orders."}), 400
 
-    timestamp = datetime.now().isoformat()
-    vendor_id = int(reorder["vendor_id"] or reorder["part_vendor_id"])
-    po_cursor = db.execute(
+    db.execute(
         """
         INSERT INTO purchase_orders
-            (warehouse_id, po_number, vendor_id, template_id, eta, notes, status, created_at, updated_at, part_id, quantity, received_quantity)
-        VALUES (?, ?, ?, ?, ?, ?, 'Email Pending', ?, ?, ?, ?, 0)
+            (warehouse_id, po_number, vendor_id, part_id, quantity, received_quantity, eta, notes, status, created_at)
+        VALUES (?, ?, ?, ?, ?, 0, ?, ?, 'Email Pending', ?)
         """,
         (
             warehouse_id,
             next_po_number(db),
-            vendor_id,
-            template_id_for_vendor_id(db, vendor_id),
+            reorder["vendor_id"] or reorder["part_vendor_id"],
+            reorder["part_id"],
+            reorder["quantity"],
             (datetime.now() + timedelta(days=7)).date().isoformat(),
-            reorder["reason"] or "Generated from reorder request",
-            timestamp,
-            timestamp,
-            int(reorder["part_id"]),
-            int(reorder["quantity"]),
+            reorder["reason"] or "Generated from Order More",
+            datetime.now().isoformat(),
         ),
     )
-    po_id = int(po_cursor.lastrowid)
     db.execute(
-        """
-        INSERT INTO purchase_order_lines (
-            purchase_order_id, part_id, quantity_ordered, quantity_received, notes, created_at, updated_at
-        )
-        VALUES (?, ?, ?, 0, ?, ?, ?)
-        """,
-        (po_id, int(reorder["part_id"]), int(reorder["quantity"]), reorder["reason"] or "", timestamp, timestamp),
+        "UPDATE reorder_requests SET status = 'Sent to PO' WHERE id = ?",
+        (reorder_id,),
     )
-    sync_purchase_order_rollups(db, po_id)
-    db.execute("UPDATE reorder_requests SET status = 'Sent to PO' WHERE id = ?", (reorder_id,))
     db.commit()
     return jsonify(bootstrap_payload(warehouse_id))
 
@@ -1881,18 +1305,36 @@ def mark_reorder_sent(reorder_id: int):
 @app.post("/api/receiving")
 def receive_parts():
     payload = request.get_json(force=True)
-    po_id = int(payload["poId"])
-    line_receipts = payload.get("lineReceipts")
-    if not line_receipts:
-        quantity = int(payload.get("quantity") or 0)
-        db = get_db()
-        first_line = db.execute("SELECT id FROM purchase_order_lines WHERE purchase_order_id = ? ORDER BY id LIMIT 1", (po_id,)).fetchone()
-        if first_line is None:
-            return jsonify({"error": "Purchase order not found."}), 404
-        payload["lineReceipts"] = {str(first_line["id"]): quantity}
-    payload["verifiedCount"] = True
-    payload.setdefault("receivedBy", payload.get("receivedBy", "Inventory"))
-    return receive_purchase_order(po_id)
+    db = get_db()
+    po = db.execute("SELECT * FROM purchase_orders WHERE id = ?", (int(payload["poId"]),)).fetchone()
+    if po is None:
+        return jsonify({"error": "Purchase order not found."}), 404
+
+    quantity = int(payload["quantity"])
+    remaining = po["quantity"] - po["received_quantity"]
+    db.execute("UPDATE parts SET stock = stock + ? WHERE id = ?", (quantity, po["part_id"]))
+    db.execute(
+        """
+        INSERT INTO receiving_logs (po_id, part_id, quantity, received_by, notes, created_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        (
+            po["id"],
+            po["part_id"],
+            quantity,
+            payload["receivedBy"].strip(),
+            payload.get("notes", "").strip(),
+            datetime.now().isoformat(),
+        ),
+    )
+    received_total = po["received_quantity"] + quantity
+    status = "Received" if received_total >= po["quantity"] else "Waiting for Part"
+    db.execute(
+        "UPDATE purchase_orders SET received_quantity = ?, status = ? WHERE id = ?",
+        (received_total, status, po["id"]),
+    )
+    db.commit()
+    return jsonify(bootstrap_payload(po["warehouse_id"]))
 
 
 @app.post("/api/usage")
@@ -1992,29 +1434,6 @@ def update_job(job_id: int):
     if job is None:
         return jsonify({"error": "Job not found."}), 404
 
-    requirement_quantities = payload.get("requirementQuantities") or []
-    validated_requirements: list[tuple[int, int, int]] = []
-    for item in requirement_quantities:
-        requirement_id = int(item["requirementId"])
-        required_quantity = int(item["requiredQuantity"])
-        requirement = db.execute(
-            """
-            SELECT job_part_requirements.id, job_part_requirements.job_id, job_part_requirements.pulled_quantity,
-                   jobs.warehouse_id
-            FROM job_part_requirements
-            JOIN jobs ON jobs.id = job_part_requirements.job_id
-            WHERE job_part_requirements.id = ?
-            """,
-            (requirement_id,),
-        ).fetchone()
-        if requirement is None or int(requirement["job_id"]) != job_id or int(requirement["warehouse_id"]) != warehouse_id:
-            return jsonify({"error": "Job part not found."}), 404
-        if required_quantity <= 0:
-            return jsonify({"error": "Required quantity must be at least 1."}), 400
-        if required_quantity < int(requirement["pulled_quantity"]):
-            return jsonify({"error": "Required quantity cannot be lower than the amount already pulled."}), 400
-        validated_requirements.append((requirement_id, required_quantity, int(requirement["job_id"])))
-
     db.execute(
         """
         UPDATE jobs
@@ -2032,25 +1451,6 @@ def update_job(job_id: int):
             job_id,
         ),
     )
-    for requirement_id, required_quantity, _job_id in validated_requirements:
-        db.execute(
-            "UPDATE job_part_requirements SET required_quantity = ? WHERE id = ?",
-            (required_quantity, requirement_id),
-        )
-    refresh_job_status(db, job_id)
-    db.commit()
-    return jsonify(bootstrap_payload(warehouse_id))
-
-
-@app.post("/api/jobs/<int:job_id>/complete")
-def complete_job(job_id: int):
-    payload = request.get_json(force=True)
-    warehouse_id = int(payload["warehouseId"])
-    db = get_db()
-    job = db.execute("SELECT * FROM jobs WHERE id = ? AND warehouse_id = ?", (job_id, warehouse_id)).fetchone()
-    if job is None:
-        return jsonify({"error": "Job not found."}), 404
-    db.execute("UPDATE jobs SET status = ?, notes = ? WHERE id = ?", ("Completed", (payload.get("notes", "").strip() or job["notes"]), job_id))
     db.commit()
     return jsonify(bootstrap_payload(warehouse_id))
 

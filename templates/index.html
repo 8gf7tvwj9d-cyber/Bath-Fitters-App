@@ -30,8 +30,10 @@
         <button class="nav-link nav-link-badged" data-view="inventory">Inventory <span id="inventory-attention-badge" class="nav-badge hidden">0</span></button>
         <button class="nav-link nav-link-badged" data-view="purchase-orders">Purchase Orders <span id="po-attention-badge" class="nav-badge hidden">0</span></button>
         <button class="nav-link" data-view="receiving">Parts Received</button>
-        <button class="nav-link" data-view="jobs">Jobs</button>
+        <button class="nav-link nav-link-badged" data-view="jobs">Jobs <span id="jobs-attention-badge" class="nav-badge hidden">0</span></button>
+        <button class="nav-link" data-view="completed-jobs">Completed Jobs</button>
         <button class="nav-link" data-view="vendors">Vendors</button>
+        <button class="nav-link" data-view="order-forms">Order Forms</button>
         <button class="nav-link" data-view="warehouses">Warehouses</button>
       </nav>
       <section class="sidebar-card">
@@ -49,6 +51,7 @@
         </div>
         <div class="hero-actions">
           <button id="reset-demo" class="secondary">Reset Demo Data</button>
+          <a href="/stress-checklist" target="_blank" rel="noreferrer" class="secondary hero-link-button">Stress Checklist</a>
           <button id="export-data" class="primary">Export JSON Snapshot</button>
         </div>
       </header>
@@ -76,13 +79,21 @@
           </form>
         </div>
         <div class="panel">
-          <div class="table-header">
-            <h4>Inventory List</h4>
+          <div class="table-header inventory-header">
+            <div>
+              <h4>Inventory List</h4>
+              <p class="subtle">Filter down to the exact parts you need to review.</p>
+            </div>
             <input id="inventory-search" type="search" placeholder="Search part, category, or vendor">
+          </div>
+          <div class="inventory-filters">
+            <label>Status<select id="inventory-status-filter"></select></label>
+            <label>Vendor<select id="inventory-vendor-filter"></select></label>
+            <label>Category<select id="inventory-category-filter"></select></label>
           </div>
           <div class="table-wrap">
             <table>
-              <thead><tr><th>Part</th><th>Stock</th><th>Vendor</th><th>Status</th><th></th></tr></thead>
+              <thead><tr><th>Part</th><th>Photo</th><th>Stock</th><th>Vendor</th><th>Status</th><th></th></tr></thead>
               <tbody id="inventory-table"></tbody>
             </table>
           </div>
@@ -91,27 +102,30 @@
 
       <section id="purchase-orders-view" class="view">
         <div class="section-heading section-heading-split">
-          <div><p class="eyebrow">Purchasing</p><h3>Order forms, send status, and incoming parts</h3></div>
-          <button class="secondary form-toggle" data-form-target="po-form-panel" data-open-label="Create PO" data-close-label="Hide Form">Create PO</button>
-        </div>
-        <div id="po-form-panel" class="panel form-panel hidden">
-          <form id="po-form" class="form-grid compact">
-            <label>Vendor<select id="po-vendor" required></select></label>
-            <label>Part<select id="po-part" required></select></label>
-            <label>Quantity Ordered<input id="po-quantity" type="number" min="1" required></label>
-            <label>ETA<input id="po-eta" type="date" required></label>
-            <label>Notes<input id="po-notes" type="text"></label>
-            <div class="form-actions"><button type="submit" class="primary">Create PO</button></div>
-          </form>
+          <div><p class="eyebrow">Purchase Orders</p><h3>Stage grouped orders and manage vendor paperwork</h3></div>
         </div>
         <div class="panel">
-          <div class="table-header"><h4>Open and closed orders</h4></div>
+          <div class="table-header section-heading-split">
+            <div>
+              <h4>Order List</h4>
+              <p class="subtle">Add parts from inventory, review the staging list, then generate the fewest vendor-specific purchase orders possible.</p>
+            </div>
+            <div class="hero-actions">
+              <button id="order-list-clear" class="ghost">Clear List</button>
+              <button id="order-list-generate" class="primary">Generate Orders</button>
+            </div>
+          </div>
+          <div id="order-list-summary" class="subtle order-summary hidden"></div>
           <div class="table-wrap">
             <table>
-              <thead><tr><th>PO #</th><th>Vendor</th><th>Part</th><th>Ordered</th><th>ETA</th><th>Status</th><th>Notes</th><th>Actions</th></tr></thead>
-              <tbody id="po-table"></tbody>
+              <thead><tr><th>Part</th><th>Vendor</th><th>Qty Requested</th><th>Template</th><th>Notes</th><th></th></tr></thead>
+              <tbody id="order-list-table"></tbody>
             </table>
           </div>
+        </div>
+        <div class="panel">
+          <div class="table-header"><h4>Active purchase orders</h4></div>
+          <div id="po-list" class="activity-list purchase-order-list"></div>
         </div>
       </section>
 
@@ -130,8 +144,11 @@
         <div id="job-form-panel" class="panel form-panel hidden">
           <form id="job-form" class="form-grid compact">
             <label>Job / Work Order<input id="job-number" type="text" required></label>
+            <label>Customer Name<input id="job-customer" type="text" required></label>
+            <label>Address<input id="job-address" type="text" required></label>
             <label>Job Title<input id="job-title" type="text" required></label>
             <label>Technician / Team<input id="job-tech" type="text" required></label>
+            <label>Scheduled Date<input id="job-scheduled-for" type="date" required></label>
             <label>Notes<input id="job-notes" type="text"></label>
             <div class="job-parts-builder">
               <div class="table-header">
@@ -146,8 +163,84 @@
         <div class="panel"><h4>Active jobs</h4><div id="jobs-list" class="activity-list"></div></div>
       </section>
 
-      <section id="warehouses-view" class="view">
+      <section id="completed-jobs-view" class="view">
+        <div class="section-heading">
+          <div><p class="eyebrow">Completed Jobs</p><h3>Finished work orders and pulled-part history</h3></div>
+        </div>
+        <div class="panel"><h4>Completed jobs</h4><div id="completed-jobs-list" class="activity-list"></div></div>
+      </section>
+
+      <div id="job-edit-overlay" class="modal-overlay hidden job-edit-overlay">
+        <div class="modal-card job-edit-modal-card">
+          <div class="modal-header">
+            <div>
+              <p class="eyebrow">Edit Job</p>
+              <h3 id="job-edit-title">Job details</h3>
+            </div>
+            <p class="subtle">Save changes to return to the job list.</p>
+          </div>
+          <form id="job-edit-modal-form" class="job-edit-modal-grid"></form>
+        </div>
+      </div>
+
+      <div id="job-part-modal" class="modal-overlay hidden">
+        <div class="modal-card job-part-modal-card">
+          <div class="modal-header">
+            <div>
+              <p class="eyebrow">Add Part to Job</p>
+              <h3 id="job-part-modal-title">Select a part</h3>
+            </div>
+            <button type="button" class="ghost" id="job-part-modal-close">Close</button>
+          </div>
+          <div class="inventory-filters modal-filters">
+            <label>Search<input id="job-part-modal-search" type="search" placeholder="Search part, category, or vendor"></label>
+            <label>Status<select id="job-part-modal-status-filter"></select></label>
+            <label>Vendor<select id="job-part-modal-vendor-filter"></select></label>
+            <label>Category<select id="job-part-modal-category-filter"></select></label>
+          </div>
+          <div class="modal-select-toolbar">
+            <div id="job-part-modal-selected" class="subtle">Choose a part from the list below.</div>
+            <label>Quantity<input id="job-part-modal-quantity" type="number" min="1" value="1"></label>
+            <button type="button" class="primary" id="job-part-modal-confirm">Add Selected Part</button>
+          </div>
+          <div class="table-wrap modal-table-wrap">
+            <table>
+              <thead><tr><th>Part</th><th>Photo</th><th>Stock</th><th>Vendor</th><th>Status</th><th></th></tr></thead>
+              <tbody id="job-part-modal-table"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+
+      <section id="order-forms-view" class="view">
         <div class="section-heading section-heading-split">
+          <div><p class="eyebrow">Order Forms</p><h3>Manage placeholder form templates</h3></div>
+          <button class="secondary form-toggle" data-form-target="order-form-panel" data-open-label="Add Order Form" data-close-label="Hide Form">Add Order Form</button>
+        </div>
+        <div id="order-form-panel" class="panel form-panel hidden">
+          <form id="order-form-template-form" class="form-grid compact">
+            <label>Template ID<input id="order-form-template-id" type="text" required></label>
+            <label>Template Name<input id="order-form-template-name" type="text" required></label>
+            <label>Form Style<select id="order-form-template-variant"><option value="aquaflow">AquaFlow Style</option><option value="bathbuild">BathBuild Style</option></select></label>
+            <label style="grid-column: 1 / -1;">Notes<input id="order-form-template-notes" type="text"></label>
+            <div class="form-actions">
+              <button type="submit" class="primary">Add Order Form</button>
+              <button type="button" id="order-form-template-clear" class="ghost">Clear</button>
+            </div>
+          </form>
+        </div>
+        <div class="panel">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Template ID</th><th>Name</th><th>Style</th><th>Notes</th><th></th></tr></thead>
+              <tbody id="order-form-template-table"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section id="warehouses-view" class="view">        <div class="section-heading section-heading-split">
           <div><p class="eyebrow">Warehouses</p><h3>Manage locations</h3></div>
           <button class="secondary form-toggle" data-form-target="warehouse-form-panel" data-open-label="Add Warehouse" data-close-label="Hide Form">Add Warehouse</button>
         </div>
@@ -183,6 +276,7 @@
             <label>Email<input id="vendor-email" type="email" required></label>
             <label>Phone<input id="vendor-phone" type="text" required></label>
             <label>Lead Time (days)<input id="vendor-lead-time" type="number" min="0" required></label>
+            <label>Linked Order Form<select id="vendor-template"></select></label>
             <div class="form-actions">
               <button type="submit" class="primary">Add Vendor</button>
               <button type="button" id="vendor-form-clear" class="ghost">Clear</button>
@@ -192,7 +286,7 @@
         <div class="panel">
           <div class="table-wrap">
             <table>
-              <thead><tr><th>Vendor</th><th>Contact</th><th>Email</th><th>Phone</th><th>Lead Time</th><th></th></tr></thead>
+              <thead><tr><th>Vendor</th><th>Contact</th><th>Email</th><th>Phone</th><th>Lead Time</th><th>Order Form</th><th></th></tr></thead>
               <tbody id="vendor-table"></tbody>
             </table>
           </div>

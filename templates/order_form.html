@@ -8,162 +8,347 @@
     body {
       margin: 0;
       font-family: Arial, sans-serif;
-      background: #eef4f1;
+      background: #eaf2ec;
       color: #17352a;
     }
-    .sheet {
-      max-width: 980px;
+    .page {
+      max-width: 1180px;
       margin: 24px auto;
-      background: #ffffff;
-      border: 1px solid #c7d8cf;
-      box-shadow: 0 18px 50px rgba(18, 52, 39, 0.12);
-    }
-    .banner {
-      padding: 24px 28px;
-      color: white;
-    }
-    .banner.aquaflow { background: linear-gradient(135deg, #0c6b4f, #0a8a63); }
-    .banner.bathbuild { background: linear-gradient(135deg, #245d75, #2f8891); }
-    .banner h1, .banner p { margin: 0; }
-    .banner p { margin-top: 8px; opacity: 0.88; }
-    .body {
-      padding: 24px 28px 32px;
+      padding: 0 18px 28px;
       display: grid;
-      gap: 22px;
+      gap: 18px;
+    }
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 18px 20px;
+      background: #ffffff;
+      border: 1px solid #d0ddd6;
+      border-radius: 18px;
+      box-shadow: 0 14px 34px rgba(18, 52, 39, 0.08);
+    }
+    .toolbar h1,
+    .toolbar p {
+      margin: 0;
+    }
+    .toolbar-copy {
+      color: #577264;
+      font-size: 0.94rem;
+    }
+    .toolbar-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .action-button {
+      border: 0;
+      border-radius: 999px;
+      padding: 11px 15px;
+      background: #0c6b4f;
+      color: #ffffff;
+      cursor: pointer;
+      font: inherit;
+    }
+    .action-button.secondary {
+      background: #245d75;
+    }
+    .action-button.ghost {
+      background: #e9f3ee;
+      color: #17352a;
+      border: 1px solid #cdded5;
     }
     .notice {
       padding: 14px 16px;
-      border: 1px dashed #8fb5a4;
-      background: #f6fbf8;
+      border: 1px dashed #91b5a7;
+      border-radius: 14px;
+      background: #f5fbf7;
       color: #356250;
     }
-    .grid {
+    .preview-shell {
+      padding: 22px;
+      background: #f7fbf8;
+      border: 1px solid #cfddd5;
+      border-radius: 22px;
+      box-shadow: 0 18px 48px rgba(18, 52, 39, 0.10);
+      overflow: auto;
+    }
+    .preview-label {
+      margin: 0 0 12px;
+      color: #557466;
+      font-size: 0.92rem;
+    }
+    #form-preview-svg {
+      width: 100%;
+      height: auto;
+      background: #ffffff;
+      display: block;
+      border-radius: 18px;
+    }
+    .status-copy {
+      color: #557466;
+      font-size: 0.92rem;
+    }
+    .helper-grid {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 16px;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 18px;
     }
     .card {
-      border: 1px solid #d7e3dd;
-      border-radius: 14px;
-      padding: 16px;
-      background: #fbfefd;
+      padding: 18px;
+      border-radius: 18px;
+      background: #ffffff;
+      border: 1px solid #d0ddd6;
+      box-shadow: 0 12px 30px rgba(18, 52, 39, 0.06);
     }
-    .card h2 {
-      margin: 0 0 10px 0;
-      font-size: 1rem;
+    .card h2,
+    .card p {
+      margin: 0;
     }
-    .label {
-      font-size: 0.78rem;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: #5f7d70;
+    .card p + p,
+    .card ul {
+      margin-top: 10px;
     }
-    .value {
-      margin-top: 4px;
-      font-size: 1rem;
-      font-weight: 700;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-    th, td {
-      border-bottom: 1px solid #d7e3dd;
-      padding: 12px 10px;
-      text-align: left;
-    }
-    th {
-      background: #f0f7f3;
-      font-size: 0.82rem;
-      text-transform: uppercase;
-      color: #4e6f61;
-    }
-    .footer {
-      display: grid;
-      gap: 10px;
+    .card ul {
+      padding-left: 18px;
       color: #557466;
     }
+    textarea {
+      width: 100%;
+      min-height: 190px;
+      border: 1px solid #d7e3dd;
+      border-radius: 14px;
+      padding: 12px;
+      font: 0.95rem/1.45 Consolas, "Courier New", monospace;
+      color: #17352a;
+      background: #ffffff;
+      resize: vertical;
+      margin-top: 12px;
+    }
     @media print {
-      body { background: white; }
-      .sheet { margin: 0; box-shadow: none; border: 0; }
+      body {
+        background: #ffffff;
+      }
+      .toolbar,
+      .notice,
+      .helper-grid {
+        display: none !important;
+      }
+      .page {
+        max-width: none;
+        margin: 0;
+        padding: 0;
+      }
+      .preview-shell {
+        padding: 0;
+        border: 0;
+        box-shadow: none;
+        background: #ffffff;
+      }
+    }
+    @media (max-width: 900px) {
+      .helper-grid {
+        grid-template-columns: 1fr;
+      }
+      .toolbar {
+        align-items: stretch;
+      }
+      .toolbar-actions {
+        width: 100%;
+      }
+      .action-button {
+        flex: 1 1 180px;
+      }
     }
   </style>
 </head>
 <body>
-  <div class="sheet">
-    <div class="banner {{ reorder.form_variant }}">
-      <h1>{{ reorder.mock_form_name }}</h1>
-      <p>Generated test vendor order form for workflow validation</p>
+  {% set svg_height = 640 + (reorder.line_items|length * 34) %}
+  <div class="page">
+    <div class="toolbar">
+      <div>
+        <h1>{{ reorder.mock_form_name }}</h1>
+        <p class="toolbar-copy">Placeholder template pipeline for future scanned vendor forms.</p>
+      </div>
+      <div class="toolbar-actions">
+        <button type="button" class="action-button" id="copy-form-image">Copy Filled Form Image</button>
+        <button type="button" class="action-button secondary" id="download-form-png">Download PNG</button>
+        <button type="button" class="action-button ghost" id="print-form-pdf">Print / Save PDF</button>
+      </div>
     </div>
-    <div class="body">
-      <div class="notice">
-        This is a mock vendor form for testing. Next week we can replace this layout with the real vendor paperwork and field mapping.
-      </div>
 
-      <div class="grid">
-        <div class="card">
-          <h2>Ordering Warehouse</h2>
-          <div class="label">Warehouse Name</div>
-          <div class="value">{{ reorder.warehouse_name }}</div>
-          <div class="label" style="margin-top:10px;">Warehouse Code</div>
-          <div class="value">{{ reorder.warehouse_code }}</div>
-        </div>
-        <div class="card">
-          <h2>Vendor Information</h2>
-          <div class="label">Vendor</div>
-          <div class="value">{{ reorder.vendor_name }}</div>
-          <div class="label" style="margin-top:10px;">Contact</div>
-          <div class="value">{{ reorder.vendor_contact }}</div>
-          <div class="label" style="margin-top:10px;">Phone</div>
-          <div class="value">{{ reorder.vendor_phone }}</div>
-        </div>
-      </div>
+    <div class="notice">
+      This is a fake placeholder vendor template built to test the future scanned-form workflow. Once you have the real forms, we can swap this mock background for the actual scanned paperwork and keep the same buttons and field-mapping flow.
+    </div>
 
+    <div class="preview-shell">
+      <p class="preview-label">Filled template preview</p>
+      <svg id="form-preview-svg" viewBox="0 0 1000 {{ svg_height }}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Filled vendor order form preview">
+        <defs>
+          <linearGradient id="headerGradient" x1="0" x2="1" y1="0" y2="1">
+            {% if reorder.form_variant == 'aquaflow' %}
+            <stop offset="0%" stop-color="#0c6b4f" />
+            <stop offset="100%" stop-color="#0a8a63" />
+            {% else %}
+            <stop offset="0%" stop-color="#245d75" />
+            <stop offset="100%" stop-color="#2f8891" />
+            {% endif %}
+          </linearGradient>
+        </defs>
+        <rect x="0" y="0" width="1000" height="{{ svg_height }}" rx="22" fill="#ffffff" stroke="#c7d8cf" stroke-width="2" />
+        <rect x="0" y="0" width="1000" height="122" rx="22" fill="url(#headerGradient)" />
+        <text x="40" y="52" fill="#ffffff" font-size="30" font-weight="700">{{ reorder.mock_form_name }}</text>
+        <text x="40" y="86" fill="rgba(255,255,255,0.86)" font-size="16">Generated placeholder order template for vendor approval workflow testing</text>
+
+        <rect x="38" y="146" width="442" height="118" rx="16" fill="#f7fbf8" stroke="#d3e0d9" />
+        <text x="58" y="178" fill="#5f7d70" font-size="12" letter-spacing="1.4">ORDERING WAREHOUSE</text>
+        <text x="58" y="212" fill="#17352a" font-size="24" font-weight="700">{{ reorder.warehouse_name }}</text>
+        <text x="58" y="242" fill="#577264" font-size="16">Code: {{ reorder.warehouse_code }}</text>
+
+        <rect x="520" y="146" width="442" height="118" rx="16" fill="#f7fbf8" stroke="#d3e0d9" />
+        <text x="540" y="178" fill="#5f7d70" font-size="12" letter-spacing="1.4">VENDOR DETAILS</text>
+        <text x="540" y="212" fill="#17352a" font-size="24" font-weight="700">{{ reorder.vendor_name }}</text>
+        <text x="540" y="242" fill="#577264" font-size="16">{{ reorder.vendor_contact }} | {{ reorder.vendor_phone }}</text>
+
+        <rect x="38" y="292" width="924" height="86" rx="16" fill="#fcfffd" stroke="#d3e0d9" />
+        <text x="58" y="324" fill="#5f7d70" font-size="12" letter-spacing="1.4">REQUEST DETAILS</text>
+        <text x="58" y="352" fill="#17352a" font-size="18" font-weight="700">Request Date: {{ reorder.request_date }}</text>
+        <text x="370" y="352" fill="#17352a" font-size="18" font-weight="700">Status: {{ reorder.status }}</text>
+        <text x="620" y="352" fill="#17352a" font-size="18" font-weight="700">Template: {{ reorder.form_variant|upper }}</text>
+
+        <rect x="38" y="404" width="924" height="{{ 110 + (reorder.line_items|length * 34) }}" rx="18" fill="#ffffff" stroke="#d3e0d9" />
+        <text x="58" y="438" fill="#5f7d70" font-size="12" letter-spacing="1.4">FILLED LINE ITEMS</text>
+        <line x1="58" y1="456" x2="942" y2="456" stroke="#d9e5de" stroke-width="1.5" />
+        <text x="58" y="484" fill="#4e6f61" font-size="13" font-weight="700">PART NUMBER</text>
+        <text x="260" y="484" fill="#4e6f61" font-size="13" font-weight="700">DESCRIPTION</text>
+        <text x="610" y="484" fill="#4e6f61" font-size="13" font-weight="700">CATEGORY</text>
+        <text x="800" y="484" fill="#4e6f61" font-size="13" font-weight="700">QTY</text>
+        <text x="870" y="484" fill="#4e6f61" font-size="13" font-weight="700">TOTAL</text>
+        {% for line in reorder.line_items %}
+        {% set y = 518 + (loop.index0 * 34) %}
+        <line x1="58" y1="{{ y + 14 }}" x2="942" y2="{{ y + 14 }}" stroke="#eef3f0" stroke-width="1" />
+        <text x="58" y="{{ y }}" fill="#a7281f" font-size="15" font-weight="700">{{ line.part_number }}</text>
+        <text x="260" y="{{ y }}" fill="#17352a" font-size="14">{{ line.description[:40] }}</text>
+        <text x="610" y="{{ y }}" fill="#577264" font-size="14">{{ line.category }}</text>
+        <text x="808" y="{{ y }}" fill="#17352a" font-size="14" font-weight="700">{{ line.quantity_ordered }}</text>
+        <text x="870" y="{{ y }}" fill="#17352a" font-size="14" font-weight="700">${{ "%.2f"|format(line.line_total) }}</text>
+        {% endfor %}
+
+        <rect x="38" y="{{ 534 + (reorder.line_items|length * 34) }}" width="924" height="64" rx="16" fill="#f7fbf8" stroke="#d3e0d9" />
+        <text x="58" y="{{ 570 + (reorder.line_items|length * 34) }}" fill="#5f7d70" font-size="12" letter-spacing="1.4">ORDER REASON</text>
+        <text x="250" y="{{ 570 + (reorder.line_items|length * 34) }}" fill="#17352a" font-size="18" font-weight="700">{{ reorder.reason or "Low stock reorder" }}</text>
+
+        <text x="58" y="{{ 620 + (reorder.line_items|length * 34) }}" fill="#577264" font-size="14">Prepared from ShopFlow for warehouse {{ reorder.warehouse_code }}.</text>
+        <text x="678" y="{{ 620 + (reorder.line_items|length * 34) }}" fill="#17352a" font-size="18" font-weight="700">Grand Total: ${{ "%.2f"|format(reorder.grand_total or reorder.line_total or 0) }}</text>
+      </svg>
+    </div>
+
+    <div class="helper-grid">
       <div class="card">
-        <h2>Requested Line Item</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Part Number</th>
-              <th>Description</th>
-              <th>Category</th>
-              <th>Qty</th>
-              <th>Unit Cost</th>
-              <th>Line Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>{{ reorder.part_number }}</td>
-              <td>{{ reorder.description }}</td>
-              <td>{{ reorder.category }}</td>
-              <td>{{ reorder.quantity }}</td>
-              <td>${{ "%.2f"|format(reorder.unit_cost) }}</td>
-              <td>${{ "%.2f"|format(reorder.line_total) }}</td>
-            </tr>
-          </tbody>
-        </table>
+        <h2>How This Will Work With Real Forms</h2>
+        <ul>
+          <li>Upload the scanned vendor form.</li>
+          <li>Map the vendor and parts to the right template.</li>
+          <li>Place order data into the correct fields.</li>
+          <li>Export the completed result as an image or PDF for email.</li>
+        </ul>
       </div>
-
-      <div class="grid">
-        <div class="card">
-          <h2>Request Details</h2>
-          <div class="label">Request Date</div>
-          <div class="value">{{ reorder.request_date }}</div>
-          <div class="label" style="margin-top:10px;">Current Status</div>
-          <div class="value">{{ reorder.status }}</div>
-        </div>
-        <div class="card">
-          <h2>Reason For Order</h2>
-          <div class="value" style="font-weight:600;">{{ reorder.reason or "Low stock reorder" }}</div>
-        </div>
-      </div>
-
-      <div class="footer">
-        <div>Prepared from ShopFlow for warehouse {{ reorder.warehouse_code }}.</div>
-        <div>This page is intended to be reviewed, printed, or exported for internal approval testing.</div>
+      <div class="card">
+        <h2>Status</h2>
+        <p id="export-status" class="status-copy">Use the buttons above to test the exact export workflow you?ll use later.</p>
       </div>
     </div>
   </div>
+
+  <script>
+    const svg = document.getElementById("form-preview-svg");
+    const exportStatus = document.getElementById("export-status");
+    const exportBaseName = "{{ reorder.vendor_name|replace(' ', '_') }}_{{ reorder.warehouse_code }}_{{ reorder.request_date|replace(' ', '_')|replace(',', '') }}";
+
+    function setStatus(message) {
+      if (exportStatus) {
+        exportStatus.textContent = message;
+      }
+    }
+
+    function svgMarkup() {
+      const clone = svg.cloneNode(true);
+      clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+      return new XMLSerializer().serializeToString(clone);
+    }
+
+    function svgUrl() {
+      return URL.createObjectURL(new Blob([svgMarkup()], { type: "image/svg+xml;charset=utf-8" }));
+    }
+
+    async function svgToCanvas() {
+      const url = svgUrl();
+      const image = new Image();
+      image.decoding = "async";
+      const loaded = new Promise((resolve, reject) => {
+        image.onload = resolve;
+        image.onerror = reject;
+      });
+      image.src = url;
+      await loaded;
+      const viewBox = svg.viewBox.baseVal;
+      const canvas = document.createElement("canvas");
+      canvas.width = viewBox.width;
+      canvas.height = viewBox.height;
+      const context = canvas.getContext("2d");
+      context.fillStyle = "#ffffff";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.drawImage(image, 0, 0);
+      URL.revokeObjectURL(url);
+      return canvas;
+    }
+
+    async function downloadPng() {
+      const canvas = await svgToCanvas();
+      const link = document.createElement("a");
+      link.download = `${exportBaseName}.png`;
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+      setStatus("PNG downloaded. You can attach it to your email.");
+    }
+
+    async function copyImage() {
+      const canvas = await svgToCanvas();
+      const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+      if (navigator.clipboard && window.ClipboardItem && blob) {
+        await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+        setStatus("Filled form image copied. You can paste it into your email.");
+        return;
+      }
+      const link = document.createElement("a");
+      link.download = `${exportBaseName}.png`;
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+      setStatus("Clipboard image copy is not supported here, so a PNG was downloaded instead.");
+    }
+
+    document.getElementById("copy-form-image")?.addEventListener("click", async () => {
+      try {
+        await copyImage();
+      } catch (error) {
+        setStatus("Could not copy the image automatically.");
+      }
+    });
+
+    document.getElementById("download-form-png")?.addEventListener("click", async () => {
+      try {
+        await downloadPng();
+      } catch (error) {
+        setStatus("Could not generate the PNG export.");
+      }
+    });
+
+    document.getElementById("print-form-pdf")?.addEventListener("click", () => {
+      setStatus("Use your browser's print dialog and choose Save as PDF.");
+      window.print();
+    });
+  </script>
 </body>
 </html>

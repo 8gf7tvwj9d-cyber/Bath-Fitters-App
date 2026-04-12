@@ -1,0 +1,178 @@
+{
+  "passed": 16,
+  "failed": 2,
+  "manual": 4,
+  "results": [
+    {
+      "name": "Data Volume - 1000 inventory items",
+      "passed": true,
+      "detail": "Inventory count after seeding: 1000",
+      "category": "data_volume",
+      "manual": false
+    },
+    {
+      "name": "Duplicate Part Number Guard",
+      "passed": true,
+      "detail": "Duplicate part numbers are rejected at the API level.",
+      "category": "duplicate_data",
+      "manual": false
+    },
+    {
+      "name": "Negative Inventory Validation",
+      "passed": false,
+      "detail": "Negative stock response status: 200",
+      "category": "inventory_edge_cases",
+      "manual": false
+    },
+    {
+      "name": "Zero and Low Stock Records",
+      "passed": true,
+      "detail": "Zero and low-stock parts created without crashing.",
+      "category": "inventory_edge_cases",
+      "manual": false
+    },
+    {
+      "name": "Data Volume - 200 jobs",
+      "passed": true,
+      "detail": "Job count after seeding: 200",
+      "category": "data_volume",
+      "manual": false
+    },
+    {
+      "name": "Edge Case Job - No Parts",
+      "passed": true,
+      "detail": "API currently blocks jobs with no parts, which is consistent but means this workflow is unsupported.",
+      "category": "edge_case_jobs",
+      "manual": false
+    },
+    {
+      "name": "Edge Case Job - One Part",
+      "passed": true,
+      "detail": "Created a single-part job successfully.",
+      "category": "edge_case_jobs",
+      "manual": false
+    },
+    {
+      "name": "Long List - Job With 100 Parts",
+      "passed": true,
+      "detail": "Created a very large job to exercise list rendering and expansion pressure.",
+      "category": "long_list",
+      "manual": false
+    },
+    {
+      "name": "Data Volume - 300 purchase orders",
+      "passed": true,
+      "detail": "Purchase order count after seeding: 300",
+      "category": "data_volume",
+      "manual": false
+    },
+    {
+      "name": "Long List - Purchase Order With 20+ Line Items",
+      "passed": false,
+      "detail": "Current data model only supports one part per purchase order, so true multi-line PO stress is not yet supported.",
+      "category": "long_list",
+      "manual": false
+    },
+    {
+      "name": "Data Volume - Bootstrap Load Time",
+      "passed": true,
+      "detail": "Average /api/bootstrap under heavy data: 25.00 ms, max 31.95 ms",
+      "category": "data_volume",
+      "manual": false
+    },
+    {
+      "name": "Data Integrity - Same Part Across Multiple Jobs",
+      "passed": true,
+      "detail": "Shared part stock changed from 25 to 20 after pulls across two jobs.",
+      "category": "data_integrity",
+      "manual": false
+    },
+    {
+      "name": "Over Receiving - Inventory Uses Actual Received Quantity",
+      "passed": true,
+      "detail": "Received quantity stored as 15 on PO PO-1012.",
+      "category": "po_edge_cases",
+      "manual": false
+    },
+    {
+      "name": "Partial Receiving - Running Totals",
+      "passed": true,
+      "detail": "Received quantity 65 across 3 receiving entries.",
+      "category": "po_edge_cases",
+      "manual": false
+    },
+    {
+      "name": "Job Editing - Persisted Fields",
+      "passed": true,
+      "detail": "Job details, notes, and long/special-character note persisted correctly.",
+      "category": "job_editing",
+      "manual": false
+    },
+    {
+      "name": "Rapid Action - Pull/Return Stability",
+      "passed": true,
+      "detail": "After rapid pull/return cycles, pulled quantity settled at 0.",
+      "category": "rapid_actions",
+      "manual": false
+    },
+    {
+      "name": "Navigation/Persistence - Repeated Reloads",
+      "passed": true,
+      "detail": "30 repeated bootstrap calls completed. Max response time 33.99 ms.",
+      "category": "navigation_persistence",
+      "manual": false
+    },
+    {
+      "name": "Persistence - Data Survives Refresh",
+      "passed": true,
+      "detail": "Edited data remained intact after fresh bootstrap reload.",
+      "category": "navigation_persistence",
+      "manual": false
+    },
+    {
+      "name": "Long List UI - Layout / Scroll / Dropdown Rendering",
+      "passed": false,
+      "detail": "Heavy data for long-list UI was created (100-part jobs, 1000 parts, 300 POs), but actual scrolling, overlap, and dropdown rendering need browser-side verification.",
+      "category": "manual_ui",
+      "manual": true
+    },
+    {
+      "name": "Search / Filter Accuracy in Browser",
+      "passed": false,
+      "detail": "Similar part names and duplicate-like job names were seeded, but visual search result clarity and rapid filter interaction need browser-side verification.",
+      "category": "manual_ui",
+      "manual": true
+    },
+    {
+      "name": "Navigation Stress - Tab Switching / State Persistence in Browser",
+      "passed": false,
+      "detail": "Repeated bootstrap reloads passed, but actual rapid tab switching and dropdown persistence need browser-side verification.",
+      "category": "manual_ui",
+      "manual": true
+    },
+    {
+      "name": "Full System UI Stress - Smooth Scrolling / Freeze Check",
+      "passed": false,
+      "detail": "The backend and payload stress run completed under heavy data. Browser responsiveness still needs manual validation on the live UI.",
+      "category": "manual_ui",
+      "manual": true
+    }
+  ],
+  "context": {
+    "initial_bootstrap_avg_ms": 1.84,
+    "base_counts": {
+      "parts": 60,
+      "jobs": 2,
+      "purchase_orders": 3
+    },
+    "heavy_bootstrap_avg_ms": 25.0,
+    "heavy_bootstrap_max_ms": 31.95,
+    "final_counts": {
+      "parts": 1007,
+      "jobs": 200,
+      "purchase_orders": 301,
+      "job_requirements": 1698,
+      "receiving_logs": 5
+    }
+  }
+}
