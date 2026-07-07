@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tester Notes - ShopFlow Inventory</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Source+Sans+3:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/assets/styles.css" />
+  </head>
+  <body>
+    <div class="test-mode-banner">TEST VERSION - DATA IS NOT FINAL</div>
+    <main class="test-notes-page">
+      <section class="panel test-notes-panel">
+        <p class="eyebrow">Beta test</p>
+        <h1>Tester Notes</h1>
+        <p>Click around and write down anything confusing, missing, broken, or annoying.</p>
+        <p>Do not worry about test data.</p>
+        <div class="hero-actions">
+          {% if feedback_url %}
+            <a class="primary feedback-link" href="{{ feedback_url }}" target="_blank" rel="noopener noreferrer">Submit Feedback</a>
+          {% else %}
+            <span class="feedback-unconfigured">Feedback link not configured.</span>
+          {% endif %}
+          <a class="ghost feedback-link" href="/">Back to App</a>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

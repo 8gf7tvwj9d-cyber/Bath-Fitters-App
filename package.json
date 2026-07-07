@@ -1,0 +1,32 @@
+{
+  "name": "bath-fitters-app",
+  "version": "1.0.0",
+  "description": "ShopFlow is a Python web app starter for shop inventory, purchasing, receiving, and job usage tracking.",
+  "main": "index.js",
+  "scripts": {
+    "build": "python -m py_compile app.py",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "format:check": "prettier --check assets/app.js assets/styles.css templates/index.html",
+    "lint:fix": "eslint assets/app.js --fix",
+    "format": "prettier --write assets/app.js assets/styles.css templates/index.html",
+    "lint": "eslint assets/app.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/8gf7tvwj9d-cyber/Bath-Fitters-App.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/8gf7tvwj9d-cyber/Bath-Fitters-App/issues"
+  },
+  "homepage": "https://github.com/8gf7tvwj9d-cyber/Bath-Fitters-App#readme",
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.2.0",
+    "globals": "^17.5.0",
+    "prettier": "^3.8.2"
+  }
+}

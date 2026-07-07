@@ -1,304 +1,902 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ShopFlow Inventory</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/styles.css">
-</head>
-<body>
-  <div class="page-shell">
-    <aside class="sidebar">
-      <div class="brand">
-        <p class="eyebrow">Shop Inventory Command Center</p>
-        <h1>ShopFlow</h1>
-        <p class="brand-copy">A starter system for receiving, stock control, purchasing, and job usage tracking.</p>
-      </div>
-      <section class="sidebar-card">
-        <h2>Warehouse</h2>
-        <label class="warehouse-picker-label">
-          Active warehouse
-          <select id="warehouse-selector"></select>
-        </label>
-        <p id="warehouse-summary" class="subtle">Showing one location at a time.</p>
-      </section>
-      <nav class="nav">
-        <button class="nav-link active" data-view="dashboard">Dashboard</button>
-        <button class="nav-link nav-link-badged" data-view="inventory">Inventory <span id="inventory-attention-badge" class="nav-badge hidden">0</span></button>
-        <button class="nav-link nav-link-badged" data-view="purchase-orders">Purchase Orders <span id="po-attention-badge" class="nav-badge hidden">0</span></button>
-        <button class="nav-link" data-view="receiving">Parts Received</button>
-        <button class="nav-link nav-link-badged" data-view="jobs">Jobs <span id="jobs-attention-badge" class="nav-badge hidden">0</span></button>
-        <button class="nav-link" data-view="completed-jobs">Completed Jobs</button>
-        <button class="nav-link" data-view="vendors">Vendors</button>
-        <button class="nav-link" data-view="order-forms">Order Forms</button>
-        <button class="nav-link" data-view="warehouses">Warehouses</button>
-      </nav>
-      <section class="sidebar-card">
-        <h2>Why This Version Helps</h2>
-        <p>It gives you a clean workflow demo right away and stores data in your browser so you can test ideas quickly.</p>
-      </section>
-    </aside>
-
-    <main class="content">
-      <header class="hero">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ShopFlow Inventory</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Source+Sans+3:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="assets/styles.css" />
+  </head>
+  <body>
+    <div class="test-mode-banner">TEST VERSION - DATA IS NOT FINAL</div>
+    <div id="login-overlay" class="login-overlay">
+      <div class="login-card">
         <div>
-          <p class="eyebrow">MVP Web App</p>
-          <h2>Inventory built around how the shop actually works</h2>
-          <p class="hero-copy">Track parts from purchase order to receiving to job usage, with reorder visibility and part history in one place.</p>
+          <p class="eyebrow">Bath Fitters WMS</p>
+          <h2>Sign In</h2>
+          <p class="subtle">Managers can access admin tools. Installers and service techs only see assigned jobs.</p>
         </div>
-        <div class="hero-actions">
-          <button id="reset-demo" class="secondary">Reset Demo Data</button>
-          <a href="/stress-checklist" target="_blank" rel="noreferrer" class="secondary hero-link-button">Stress Checklist</a>
-          <button id="export-data" class="primary">Export JSON Snapshot</button>
+        <form id="auth-login-form" class="form-grid compact">
+          <label>Username<input id="login-username" type="text" autocomplete="username" required /></label>
+          <label>Password<input id="login-password" type="password" autocomplete="current-password" required /></label>
+          <div class="form-actions">
+            <button type="submit" class="primary">Sign In</button>
+          </div>
+        </form>
+        <p id="login-error" class="login-error hidden"></p>
+        <div class="login-helper">
+          <p><strong>Demo users</strong></p>
+          <p class="subtle">
+            `manager`, `dal.install`, `dal.service`, `chi.install`, `chi.service`, `phx.install`, `phx.service`
+          </p>
+          <p class="subtle">Default password: `55555`</p>
         </div>
-      </header>
+      </div>
+    </div>
+    <div class="page-shell app-locked">
+      <aside class="sidebar">
+        <div class="brand">
+          <p class="eyebrow">Shop Inventory Command Center</p>
+          <h1>ShopFlow</h1>
+          <p class="brand-copy">A starter system for receiving, stock control, purchasing, and job usage tracking.</p>
+        </div>
+        <section class="sidebar-card">
+          <h2>Warehouse</h2>
+          <label class="warehouse-picker-label">
+            Active warehouse
+            <select id="warehouse-selector"></select>
+          </label>
+          <p id="warehouse-summary" class="subtle">Showing one location at a time.</p>
+        </section>
+        <nav class="nav">
+          <button class="nav-link active" data-view="dashboard">Dashboard</button>
+          <button class="nav-link nav-link-badged" data-view="inventory" data-permission="inventory_access">
+            Inventory <span id="inventory-attention-badge" class="nav-badge hidden">0</span>
+          </button>
+          <button class="nav-link nav-link-badged" data-view="purchase-orders" data-permission="purchase_orders_access">
+            Purchase Orders <span id="po-attention-badge" class="nav-badge hidden">0</span>
+          </button>
+          <button class="nav-link" data-view="receiving" data-permission="receiving_access">Parts Received</button>
+          <button class="nav-link nav-link-badged" data-view="jobs">
+            Jobs <span id="jobs-attention-badge" class="nav-badge hidden">0</span>
+          </button>
+          <button class="nav-link" data-view="archive">Archive</button>
+          <button class="nav-link" data-view="insights" data-permission="reporting_access">Insights</button>
+          <button class="nav-link" data-view="vendors" data-permission="purchase_orders_access">Vendors</button>
+          <button class="nav-link" data-view="warehouses" data-permission="edit_records">Warehouses</button>
+          <button class="nav-link" data-view="users" data-permission="user_management">Users</button>
+        </nav>
+        <section class="sidebar-card" data-permission="reporting_access">
+          <h2>Archive Window</h2>
+          <label class="warehouse-picker-label">
+            Keep recent activity for
+            <select id="archive-cutoff-selector">
+              <option value="14">14 days</option>
+              <option value="30">30 days</option>
+              <option value="60">60 days</option>
+              <option value="90">90 days</option>
+            </select>
+          </label>
+          <p class="subtle">Older received parts and completed jobs move into monthly archive groups.</p>
+        </section>
+        <section class="sidebar-card" data-permission="reporting_access">
+          <h2>Why This Version Helps</h2>
+          <p>
+            It gives you a clean workflow demo right away and stores data in your browser so you can test ideas quickly.
+          </p>
+        </section>
+      </aside>
 
-      <section id="dashboard-view" class="view active"></section>
+      <main class="content">
+        <header class="hero">
+          <div>
+            <p class="eyebrow">MVP Web App</p>
+            <h2>Inventory built around how the shop actually works</h2>
+            <p class="hero-copy">
+              Track parts from purchase order to receiving to job usage, with reorder visibility and part history in one
+              place.
+            </p>
+          </div>
+          <div class="hero-actions">
+            <div id="session-summary" class="session-summary"></div>
+            {% if feedback_url %}
+              <a class="primary feedback-link" href="{{ feedback_url }}" target="_blank" rel="noopener noreferrer">Submit Feedback</a>
+            {% else %}
+              <span class="feedback-unconfigured">Feedback link not configured.</span>
+            {% endif %}
+            <a class="ghost feedback-link" href="/test-notes">Tester Notes</a>
+            <button id="logout-button" class="ghost">Log Out</button>
+            <button id="reset-demo" class="secondary" data-permission="edit_records">Reset Demo Data</button>
+            <button id="export-data" class="primary" data-permission="reporting_access">Export JSON Snapshot</button>
+          </div>
+        </header>
 
-      <section id="inventory-view" class="view">
-        <div class="section-heading section-heading-split">
-          <div><p class="eyebrow">Inventory</p><h3>Parts on hand</h3></div>
-          <button class="secondary form-toggle" data-form-target="part-form-panel" data-open-label="Add Part" data-close-label="Hide Form">Add Part</button>
-        </div>
-        <div id="part-form-panel" class="panel form-panel hidden">
-          <form id="part-form" class="form-grid">
-            <label>Part Number<input id="part-number" type="text" required></label>
-            <label>Description<input id="part-description" type="text" required></label>
-            <label>Category<input id="part-category" type="text" required></label>
-            <label>Current Stock<input id="part-stock" type="number" min="0" required></label>
-            <label>Reorder Point<input id="part-reorder" type="number" min="0" required></label>
-            <label>Preferred Vendor<select id="part-vendor"></select></label>
-            <label>Unit Cost<input id="part-cost" type="number" min="0" step="0.01" required></label>
-            <div class="form-actions">
-              <button type="submit" class="primary">Add Part</button>
-              <button type="button" id="part-form-clear" class="ghost">Clear</button>
-            </div>
-          </form>
-        </div>
-        <div class="panel">
-          <div class="table-header inventory-header">
+        <section id="dashboard-view" class="view active"></section>
+
+        <section id="inventory-view" class="view" data-permission="inventory_access">
+          <div class="section-heading section-heading-split">
             <div>
-              <h4>Inventory List</h4>
-              <p class="subtle">Filter down to the exact parts you need to review.</p>
-            </div>
-            <input id="inventory-search" type="search" placeholder="Search part, category, or vendor">
-          </div>
-          <div class="inventory-filters">
-            <label>Status<select id="inventory-status-filter"></select></label>
-            <label>Vendor<select id="inventory-vendor-filter"></select></label>
-            <label>Category<select id="inventory-category-filter"></select></label>
-          </div>
-          <div class="table-wrap">
-            <table>
-              <thead><tr><th>Part</th><th>Photo</th><th>Stock</th><th>Vendor</th><th>Status</th><th></th></tr></thead>
-              <tbody id="inventory-table"></tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      <section id="purchase-orders-view" class="view">
-        <div class="section-heading section-heading-split">
-          <div><p class="eyebrow">Purchase Orders</p><h3>Stage grouped orders and manage vendor paperwork</h3></div>
-        </div>
-        <div class="panel">
-          <div class="table-header section-heading-split">
-            <div>
-              <h4>Order List</h4>
-              <p class="subtle">Add parts from inventory, review the staging list, then generate the fewest vendor-specific purchase orders possible.</p>
+              <p class="eyebrow">Inventory</p>
+              <h3>Parts on hand</h3>
             </div>
             <div class="hero-actions">
-              <button id="order-list-clear" class="ghost">Clear List</button>
-              <button id="order-list-generate" class="primary">Generate Orders</button>
+              <button id="inventory-scan-open" class="ghost" data-open-inventory-scan-modal="true">Scan Part</button>
+              <button
+                class="secondary form-toggle"
+                data-form-target="part-form-panel"
+                data-open-label="Add Part"
+                data-close-label="Hide Form"
+                data-permission="inventory_access"
+              >
+                Add Part
+              </button>
             </div>
           </div>
-          <div id="order-list-summary" class="subtle order-summary hidden"></div>
-          <div class="table-wrap">
-            <table>
-              <thead><tr><th>Part</th><th>Vendor</th><th>Qty Requested</th><th>Template</th><th>Notes</th><th></th></tr></thead>
-              <tbody id="order-list-table"></tbody>
-            </table>
-          </div>
-        </div>
-        <div class="panel">
-          <div class="table-header"><h4>Active purchase orders</h4></div>
-          <div id="po-list" class="activity-list purchase-order-list"></div>
-        </div>
-      </section>
-
-      <section id="receiving-view" class="view">
-        <div class="section-heading">
-          <div><p class="eyebrow">Parts Received</p><h3>Orders that have been checked in</h3></div>
-        </div>
-        <div class="panel"><h4>Received order history</h4><div id="receiving-log" class="activity-list"></div></div>
-      </section>
-
-      <section id="jobs-view" class="view">
-        <div class="section-heading section-heading-split">
-          <div><p class="eyebrow">Jobs</p><h3>Create jobs and pull required parts</h3></div>
-          <button class="secondary form-toggle" data-form-target="job-form-panel" data-open-label="Add Job" data-close-label="Hide Form">Add Job</button>
-        </div>
-        <div id="job-form-panel" class="panel form-panel hidden">
-          <form id="job-form" class="form-grid compact">
-            <label>Job / Work Order<input id="job-number" type="text" required></label>
-            <label>Customer Name<input id="job-customer" type="text" required></label>
-            <label>Address<input id="job-address" type="text" required></label>
-            <label>Job Title<input id="job-title" type="text" required></label>
-            <label>Technician / Team<input id="job-tech" type="text" required></label>
-            <label>Scheduled Date<input id="job-scheduled-for" type="date" required></label>
-            <label>Notes<input id="job-notes" type="text"></label>
-            <div class="job-parts-builder">
-              <div class="table-header">
-                <h4>Required parts</h4>
-                <button type="button" id="job-add-part-row" class="ghost">Add Required Part</button>
+          <div id="part-form-panel" class="panel form-panel hidden">
+            <form id="part-form" class="form-grid">
+              <label>Part Number<input id="part-number" type="text" required /></label>
+              <label
+                >Scan Code<input id="part-scan-code" type="text" placeholder="Barcode, QR value, or internal code"
+              /></label>
+              <label>Description<input id="part-description" type="text" required /></label>
+              <label>Category<input id="part-category" type="text" required /></label>
+              <label
+                >Item Type<select id="part-item-type">
+                  <option value="stocked">Stocked</option>
+                  <option value="non_stock">Non-Stock</option>
+                </select></label
+              >
+              <label>Current Stock<input id="part-stock" type="number" min="0" required /></label>
+              <label>Reorder Point<input id="part-reorder" type="number" min="0" required /></label>
+              <label>Preferred Vendor<select id="part-vendor"></select></label>
+              <label>Unit Cost<input id="part-cost" type="number" min="0" step="0.01" required /></label>
+              <div class="form-actions">
+                <button type="submit" class="primary">Add Part</button>
+                <button type="button" id="part-form-clear" class="ghost">Clear</button>
               </div>
-              <div id="job-required-parts"></div>
+            </form>
+          </div>
+          <div class="panel">
+            <div class="table-header inventory-header">
+              <div>
+                <h4>Inventory List</h4>
+                <p class="subtle">Filter down to the exact parts you need to review.</p>
+              </div>
+              <input id="inventory-search" type="search" placeholder="Search part, category, or vendor" />
             </div>
-            <div class="form-actions"><button type="submit" class="primary">Create Job</button></div>
-          </form>
-        </div>
-        <div class="panel"><h4>Active jobs</h4><div id="jobs-list" class="activity-list"></div></div>
-      </section>
+            <div class="inventory-filters">
+              <label>Status<select id="inventory-status-filter"></select></label>
+              <label>Item Type<select id="inventory-type-filter"></select></label>
+              <label>Vendor<select id="inventory-vendor-filter"></select></label>
+              <label>Category<select id="inventory-category-filter"></select></label>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Part</th>
+                    <th>Photo</th>
+                    <th>Stock</th>
+                    <th>Vendor</th>
+                    <th>Status</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="inventory-table"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
 
-      <section id="completed-jobs-view" class="view">
-        <div class="section-heading">
-          <div><p class="eyebrow">Completed Jobs</p><h3>Finished work orders and pulled-part history</h3></div>
-        </div>
-        <div class="panel"><h4>Completed jobs</h4><div id="completed-jobs-list" class="activity-list"></div></div>
-      </section>
-
-      <div id="job-edit-overlay" class="modal-overlay hidden job-edit-overlay">
-        <div class="modal-card job-edit-modal-card">
-          <div class="modal-header">
+        <section id="purchase-orders-view" class="view" data-permission="purchase_orders_access">
+          <div class="section-heading section-heading-split">
             <div>
-              <p class="eyebrow">Edit Job</p>
-              <h3 id="job-edit-title">Job details</h3>
+              <p class="eyebrow">Purchase Orders</p>
+              <h3>Stage grouped orders and manage vendor paperwork</h3>
             </div>
-            <p class="subtle">Save changes to return to the job list.</p>
           </div>
-          <form id="job-edit-modal-form" class="job-edit-modal-grid"></form>
-        </div>
-      </div>
+          <div class="panel">
+            <div class="table-header section-heading-split">
+              <div>
+                <h4>Order List</h4>
+                <p class="subtle">
+                  Add parts from inventory, review the staging list, then generate the fewest vendor-specific purchase
+                  orders possible.
+                </p>
+              </div>
+              <div class="hero-actions">
+                <button id="order-list-clear" class="ghost">Clear List</button>
+                <button id="order-list-generate" class="primary">Generate Orders</button>
+              </div>
+            </div>
+            <div id="order-list-summary" class="subtle order-summary hidden"></div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Part</th>
+                    <th>Vendor</th>
+                    <th>Qty Requested</th>
+                    <th>Template</th>
+                    <th>Notes</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="order-list-table"></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="table-header"><h4>Active purchase orders</h4></div>
+            <div id="po-list" class="activity-list purchase-order-list"></div>
+          </div>
+        </section>
 
-      <div id="job-part-modal" class="modal-overlay hidden">
-        <div class="modal-card job-part-modal-card">
-          <div class="modal-header">
+        <section id="receiving-view" class="view" data-permission="receiving_access">
+          <div class="section-heading">
             <div>
-              <p class="eyebrow">Add Part to Job</p>
-              <h3 id="job-part-modal-title">Select a part</h3>
+              <p class="eyebrow">Parts Received</p>
+              <h3>Orders that have been checked in</h3>
             </div>
-            <button type="button" class="ghost" id="job-part-modal-close">Close</button>
           </div>
-          <div class="inventory-filters modal-filters">
-            <label>Search<input id="job-part-modal-search" type="search" placeholder="Search part, category, or vendor"></label>
-            <label>Status<select id="job-part-modal-status-filter"></select></label>
-            <label>Vendor<select id="job-part-modal-vendor-filter"></select></label>
-            <label>Category<select id="job-part-modal-category-filter"></select></label>
+          <div class="panel">
+            <h4>Received order history</h4>
+            <p class="subtle">
+              Recent receiving stays here for the selected archive window, then moves into the monthly archive below.
+            </p>
+            <div id="receiving-log" class="activity-list"></div>
           </div>
-          <div class="modal-select-toolbar">
-            <div id="job-part-modal-selected" class="subtle">Choose a part from the list below.</div>
-            <label>Quantity<input id="job-part-modal-quantity" type="number" min="1" value="1"></label>
-            <button type="button" class="primary" id="job-part-modal-confirm">Add Selected Part</button>
+          <div class="panel">
+            <h4>Receiving archive</h4>
+            <div id="receiving-archive" class="activity-list"></div>
           </div>
-          <div class="table-wrap modal-table-wrap">
-            <table>
-              <thead><tr><th>Part</th><th>Photo</th><th>Stock</th><th>Vendor</th><th>Status</th><th></th></tr></thead>
-              <tbody id="job-part-modal-table"></tbody>
-            </table>
+        </section>
+
+        <section id="jobs-view" class="view">
+          <div class="section-heading section-heading-split">
+            <div>
+              <p class="eyebrow">Jobs</p>
+              <h3>Create jobs and manage field work</h3>
+            </div>
+            <button
+              class="secondary form-toggle"
+              data-form-target="job-form-panel"
+              data-open-label="Add Job"
+              data-close-label="Hide Form"
+              data-permission="edit_records"
+            >
+              Add Job
+            </button>
+          </div>
+          <div id="job-form-panel" class="panel form-panel hidden">
+            <form id="job-form" class="form-grid compact">
+              <label>Job / Work Order<input id="job-number" type="text" required /></label>
+              <label>Customer Name<input id="job-customer" type="text" required /></label>
+              <label>Address<input id="job-address" type="text" required /></label>
+              <label>Job Title<input id="job-title" type="text" required /></label>
+              <label>Job Type<select id="job-type"></select></label>
+              <label data-permission="edit_records">Assigned User<select id="job-assigned-user"></select></label>
+              <label>Scheduled Date<input id="job-scheduled-for" type="date" required /></label>
+              <div id="job-form-message" class="inline-form-message hidden"></div>
+              <div class="job-parts-builder">
+                <div class="table-header">
+                  <h4>Required parts</h4>
+                  <button type="button" id="job-add-part-row" class="ghost">Add Required Part</button>
+                </div>
+                <div id="job-required-parts"></div>
+              </div>
+              <div id="service-job-form-sections" class="hidden"></div>
+              <div class="form-actions"><button type="submit" class="primary">Create Job</button></div>
+            </form>
+          </div>
+          <div class="panel">
+            <div class="table-header section-heading-split">
+              <div>
+                <h4>Active jobs</h4>
+                <p id="jobs-workflow-summary" class="subtle"></p>
+              </div>
+            </div>
+            <div id="jobs-sections" class="jobs-split-layout">
+              <section id="jobs-install-section" class="jobs-split-section">
+                <div class="table-header compact-header">
+                  <div>
+                    <h4>Install Jobs</h4>
+                    <p id="jobs-install-summary" class="subtle"></p>
+                  </div>
+                </div>
+                <div id="jobs-install-list" class="activity-list"></div>
+              </section>
+              <section id="jobs-detail-section" class="jobs-split-section">
+                <div class="table-header compact-header">
+                  <div>
+                    <h4>Detail Jobs</h4>
+                    <p id="jobs-detail-summary" class="subtle"></p>
+                  </div>
+                </div>
+                <div id="jobs-detail-list" class="activity-list"></div>
+              </section>
+              <section id="jobs-service-section" class="jobs-split-section">
+                <div class="table-header compact-header">
+                  <div>
+                    <h4>Service / Warranty Jobs</h4>
+                    <p id="jobs-service-summary" class="subtle"></p>
+                  </div>
+                </div>
+                <div id="jobs-service-list" class="activity-list"></div>
+              </section>
+            </div>
+          </div>
+        </section>
+
+        <section id="archive-view" class="view">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Archive</p>
+              <h3>Completed jobs and archived purchase orders</h3>
+            </div>
+          </div>
+          <div class="archive-controls-grid">
+            <div class="panel compact-panel">
+              <div class="table-header compact-header">
+                <div>
+                  <h4>Archived Install Jobs</h4>
+                  <p class="subtle">Finished installs only.</p>
+                </div>
+              </div>
+              <div class="inventory-filters archive-filter-row">
+                <label
+                  >Search<input id="archive-install-search" type="search" placeholder="Search job, customer, address"
+                /></label>
+                <label
+                  >Sort<select id="archive-install-sort">
+                    <option value="newest">Newest first</option>
+                    <option value="oldest">Oldest first</option>
+                    <option value="job-number">Job number</option>
+                  </select></label
+                >
+              </div>
+              <div id="archive-install-list" class="activity-list"></div>
+            </div>
+            <div class="panel compact-panel">
+              <div class="table-header compact-header">
+                <div>
+                  <h4>Archived Detail Jobs</h4>
+                  <p class="subtle">Completed pre-install verification visits.</p>
+                </div>
+              </div>
+              <div class="inventory-filters archive-filter-row">
+                <label
+                  >Search<input id="archive-detail-search" type="search" placeholder="Search job, customer, address"
+                /></label>
+                <label
+                  >Sort<select id="archive-detail-sort">
+                    <option value="newest">Newest first</option>
+                    <option value="oldest">Oldest first</option>
+                    <option value="job-number">Job number</option>
+                  </select></label
+                >
+              </div>
+              <div id="archive-detail-list" class="activity-list"></div>
+            </div>
+            <div class="panel compact-panel">
+              <div class="table-header compact-header">
+                <div>
+                  <h4>Archived Service / Warranty Jobs</h4>
+                  <p class="subtle">Closed service and warranty work.</p>
+                </div>
+              </div>
+              <div class="inventory-filters archive-filter-row">
+                <label
+                  >Search<input id="archive-service-search" type="search" placeholder="Search job, customer, address"
+                /></label>
+                <label
+                  >Sort<select id="archive-service-sort">
+                    <option value="newest">Newest first</option>
+                    <option value="oldest">Oldest first</option>
+                    <option value="job-number">Job number</option>
+                  </select></label
+                >
+              </div>
+              <div id="archive-service-list" class="activity-list"></div>
+            </div>
+            <div class="panel compact-panel">
+              <div class="table-header compact-header">
+                <div>
+                  <h4>Archived Purchase Orders</h4>
+                  <p class="subtle">Received and closed purchase orders.</p>
+                </div>
+              </div>
+              <div class="inventory-filters archive-filter-row">
+                <label
+                  >Search<input id="archive-po-search" type="search" placeholder="Search PO, vendor, part"
+                /></label>
+                <label
+                  >Sort<select id="archive-po-sort">
+                    <option value="newest">Newest first</option>
+                    <option value="oldest">Oldest first</option>
+                    <option value="po-number">PO number</option>
+                  </select></label
+                >
+              </div>
+              <div id="archive-po-list" class="activity-list"></div>
+            </div>
+          </div>
+        </section>
+
+        <section id="insights-view" class="view" data-permission="reporting_access">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Archive Insights</p>
+              <h3>Usage trends, reorder signals, and pattern flags</h3>
+            </div>
+          </div>
+          <div id="insights-page" class="activity-list"></div>
+        </section>
+
+        <section id="users-view" class="view" data-permission="user_management">
+          <div class="section-heading section-heading-split">
+            <div>
+              <p class="eyebrow">Users</p>
+              <h3>Manage logins and field roles</h3>
+            </div>
+          </div>
+          <div class="panel">
+            <form id="user-form" class="form-grid compact">
+              <label>Username<input id="user-username" type="text" required /></label>
+              <label>Display Name<input id="user-display-name" type="text" required /></label>
+              <label
+                >Role<select id="user-role">
+                  <option value="admin">Admin</option>
+                  <option value="manager">Manager</option>
+                  <option value="warehouse_manager">Warehouse Manager</option>
+                  <option value="installer">Installer</option>
+                  <option value="service_tech">Service Tech</option>
+                  <option value="viewer">Viewer</option>
+                </select></label
+              >
+              <label>Password<input id="user-password" type="password" required /></label>
+              <div class="form-actions">
+                <button type="submit" class="primary">Add User</button>
+                <button type="button" id="user-form-clear" class="ghost">Clear</button>
+              </div>
+            </form>
+          </div>
+          <div class="panel">
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>User</th>
+                    <th>Role</th>
+                    <th>Status</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="users-table"></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="table-header compact-header">
+              <h4>Role Permissions</h4>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Role</th>
+                    <th>Permissions</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="role-permissions-table"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <div id="job-edit-overlay" class="modal-overlay hidden job-edit-overlay">
+          <div class="modal-card job-edit-modal-card">
+            <div class="modal-header">
+              <div>
+                <p class="eyebrow">Edit Job</p>
+                <h3 id="job-edit-title">Job details</h3>
+              </div>
+              <p class="subtle">Save changes to return to the job list.</p>
+            </div>
+            <form id="job-edit-modal-form" class="job-edit-modal-grid"></form>
           </div>
         </div>
+
+        <div id="job-part-modal" class="modal-overlay hidden">
+          <div class="modal-card job-part-modal-card">
+            <div class="modal-header">
+              <div>
+                <p class="eyebrow">Add Part to Job</p>
+                <h3 id="job-part-modal-title">Select a part</h3>
+              </div>
+              <button type="button" class="ghost" id="job-part-modal-close">Close</button>
+            </div>
+            <div class="inventory-filters modal-filters">
+              <label
+                >Search<input id="job-part-modal-search" type="search" placeholder="Search part, category, or vendor"
+              /></label>
+              <label>Status<select id="job-part-modal-status-filter"></select></label>
+              <label>Item Type<select id="job-part-modal-type-filter"></select></label>
+              <label>Vendor<select id="job-part-modal-vendor-filter"></select></label>
+              <label>Category<select id="job-part-modal-category-filter"></select></label>
+            </div>
+            <div class="modal-select-toolbar">
+              <div id="job-part-modal-selected" class="subtle">Choose a part from the list below.</div>
+              <label>Quantity<input id="job-part-modal-quantity" type="number" min="1" value="1" /></label>
+              <button type="button" class="primary" id="job-part-modal-confirm">Add Selected Part</button>
+            </div>
+            <div class="table-wrap modal-table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Part</th>
+                    <th>Photo</th>
+                    <th>Stock</th>
+                    <th>Vendor</th>
+                    <th>Status</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="job-part-modal-table"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div id="job-pull-modal" class="modal-overlay hidden">
+          <div class="modal-card job-pull-modal-card">
+            <div class="modal-header">
+              <div>
+                <p class="eyebrow">Pull Parts</p>
+                <h3 id="job-pull-modal-title">Scan parts for this job</h3>
+              </div>
+              <button type="button" class="ghost" id="job-pull-modal-close">Close</button>
+            </div>
+            <div class="job-pull-layout">
+              <section class="job-pull-scan-card">
+                <form id="job-pull-scan-form" class="job-pull-scan-form">
+                  <label
+                    >Scan Code<input
+                      id="job-pull-scan-input"
+                      type="text"
+                      placeholder="Scan barcode, QR, or internal code"
+                      autocomplete="off"
+                  /></label>
+                  <div class="job-pull-scan-actions">
+                    <button type="submit" class="primary">Match Scan</button>
+                    <button type="button" class="ghost" id="job-pull-camera-toggle">Use Camera</button>
+                  </div>
+                </form>
+                <p id="job-pull-camera-status" class="subtle">
+                  USB barcode scanners can type directly into the scan field. Camera scanning works on supported phones
+                  and tablets.
+                </p>
+                <video
+                  id="job-pull-camera-preview"
+                  class="job-pull-camera-preview hidden"
+                  autoplay
+                  playsinline
+                  muted
+                ></video>
+              </section>
+              <section id="job-pull-match-panel" class="job-pull-match-panel"></section>
+              <section class="job-pull-log-card">
+                <div class="table-header compact-header">
+                  <h4>Recent Scan Log</h4>
+                </div>
+                <div id="job-pull-log" class="activity-list compact-list"></div>
+              </section>
+            </div>
+          </div>
+        </div>
+
+        <div id="inventory-scan-modal" class="modal-overlay hidden">
+          <div class="modal-card job-pull-modal-card">
+            <div class="modal-header">
+              <div>
+                <p class="eyebrow">Inventory Scan</p>
+                <h3 id="inventory-scan-modal-title">Scan a part</h3>
+              </div>
+              <button type="button" class="ghost" id="inventory-scan-modal-close">Close</button>
+            </div>
+            <div class="job-pull-layout">
+              <section class="job-pull-scan-card">
+                <form id="inventory-scan-form" class="job-pull-scan-form">
+                  <label
+                    >Scan Code<input
+                      id="inventory-scan-input"
+                      type="text"
+                      placeholder="Scan barcode, QR, or internal code"
+                      autocomplete="off"
+                  /></label>
+                  <div class="job-pull-scan-actions">
+                    <button type="submit" class="primary">Match Scan</button>
+                    <button type="button" class="ghost" id="inventory-scan-camera-toggle">Use Camera</button>
+                  </div>
+                </form>
+                <p id="inventory-scan-camera-status" class="subtle">
+                  Scan a QR code or barcode to jump straight to the matching inventory item.
+                </p>
+                <video
+                  id="inventory-scan-camera-preview"
+                  class="job-pull-camera-preview hidden"
+                  autoplay
+                  playsinline
+                  muted
+                ></video>
+              </section>
+              <section id="inventory-scan-match-panel" class="job-pull-match-panel"></section>
+            </div>
+          </div>
+        </div>
+
+        <div id="summary-panel-modal" class="modal-overlay hidden">
+          <div class="modal-card summary-panel-card">
+            <div class="modal-header">
+              <div>
+                <p class="eyebrow">Details</p>
+                <h3 id="summary-panel-title">Items</h3>
+              </div>
+              <button type="button" class="ghost" id="summary-panel-close">Close</button>
+            </div>
+            <div id="summary-panel-list" class="activity-list compact-list"></div>
+          </div>
+        </div>
+
+        <div id="job-scan-add-modal" class="modal-overlay hidden">
+          <div class="modal-card job-pull-modal-card">
+            <div class="modal-header">
+              <div>
+                <p class="eyebrow">Scan Part To Add</p>
+                <h3 id="job-scan-add-modal-title">Scan a part for this job</h3>
+              </div>
+              <button type="button" class="ghost" id="job-scan-add-modal-close">Close</button>
+            </div>
+            <div class="job-pull-layout">
+              <section class="job-pull-scan-card">
+                <form id="job-scan-add-form" class="job-pull-scan-form">
+                  <label
+                    >Scan Code<input
+                      id="job-scan-add-input"
+                      type="text"
+                      placeholder="Scan barcode, QR, or internal code"
+                      autocomplete="off"
+                  /></label>
+                  <div class="job-pull-scan-actions">
+                    <button type="submit" class="primary">Match Scan</button>
+                    <button type="button" class="ghost" id="job-scan-add-camera-toggle">Use Camera</button>
+                  </div>
+                </form>
+                <p id="job-scan-add-camera-status" class="subtle">
+                  Scan a part to add it directly to the selected job with the required quantity you choose.
+                </p>
+                <video
+                  id="job-scan-add-camera-preview"
+                  class="job-pull-camera-preview hidden"
+                  autoplay
+                  playsinline
+                  muted
+                ></video>
+              </section>
+              <section id="job-scan-add-match-panel" class="job-pull-match-panel"></section>
+            </div>
+          </div>
+        </div>
+
+        <div id="job-completion-modal" class="modal-overlay hidden">
+          <div class="modal-card job-edit-modal-card">
+            <div class="modal-header">
+              <div>
+                <p class="eyebrow">Complete Job</p>
+                <h3 id="job-completion-title">Job completion workflow</h3>
+              </div>
+              <button type="button" class="ghost" id="job-completion-close">Close</button>
+            </div>
+            <div class="job-completion-layout">
+              <form id="job-completion-form" class="job-edit-modal-grid">
+                <label
+                  >Recipient Name<input id="job-completion-recipient-name" type="text" placeholder="Optional name"
+                /></label>
+                <label
+                  >Recipient Email<input
+                    id="job-completion-recipient-email"
+                    type="email"
+                    placeholder="name@example.com"
+                /></label>
+                <label style="grid-column: 1 / -1"
+                  >Work Performed<textarea
+                    id="job-completion-work-performed"
+                    rows="4"
+                    placeholder="Describe what was completed on this job."
+                  ></textarea>
+                </label>
+                <label style="grid-column: 1 / -1"
+                  >Completion Notes<textarea
+                    id="job-completion-notes"
+                    rows="4"
+                    placeholder="Add any closeout notes, follow-up items, or handoff details."
+                  ></textarea>
+                </label>
+                <div id="job-completion-service-fields" class="hidden"></div>
+                <div class="job-completion-actions">
+                  <button type="button" class="secondary" id="job-completion-preview-button">Preview Email</button>
+                  <button type="button" class="ghost" id="job-completion-complete-only">
+                    Complete Without Sending
+                  </button>
+                  <button type="button" class="primary" id="job-completion-send-button">Complete and Send Email</button>
+                </div>
+                <p id="job-completion-email-status" class="subtle"></p>
+              </form>
+              <section id="job-completion-preview-panel" class="job-notes-card">
+                <div class="table-header compact-header">
+                  <h4>Email Preview</h4>
+                </div>
+                <div class="empty-state"><p>Preview the completion email before sending it.</p></div>
+              </section>
+            </div>
+          </div>
+        </div>
+
+        <section id="warehouses-view" class="view" data-permission="edit_records">
+          <div class="section-heading section-heading-split">
+            <div>
+              <p class="eyebrow">Warehouses</p>
+              <h3>Manage locations</h3>
+            </div>
+            <button
+              class="secondary form-toggle"
+              data-form-target="warehouse-form-panel"
+              data-open-label="Add Warehouse"
+              data-close-label="Hide Form"
+            >
+              Add Warehouse
+            </button>
+          </div>
+          <div id="warehouse-form-panel" class="panel form-panel hidden">
+            <form id="warehouse-form" class="form-grid compact">
+              <label>Warehouse Name<input id="warehouse-name" type="text" required /></label>
+              <label>Warehouse Code<input id="warehouse-code" type="text" maxlength="10" required /></label>
+              <div class="form-actions">
+                <button type="submit" class="primary">Add Warehouse</button>
+                <button type="button" id="warehouse-form-clear" class="ghost">Clear</button>
+              </div>
+            </form>
+          </div>
+          <div class="panel">
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Warehouse</th>
+                    <th>Code</th>
+                    <th>Status</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="warehouse-table"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <section id="vendors-view" class="view" data-permission="purchase_orders_access">
+          <div class="section-heading section-heading-split">
+            <div>
+              <p class="eyebrow">Vendors</p>
+              <h3>Supplier directory and order forms</h3>
+            </div>
+            <div class="section-heading-actions">
+              <button
+                class="secondary form-toggle"
+                data-form-target="vendor-form-panel"
+                data-open-label="Add Vendor"
+                data-close-label="Hide Form"
+              >
+                Add Vendor
+              </button>
+              <button
+                class="secondary form-toggle"
+                data-form-target="order-form-panel"
+                data-open-label="Add Form"
+                data-close-label="Hide Form"
+              >
+                Add Form
+              </button>
+            </div>
+          </div>
+          <div id="vendor-form-panel" class="panel form-panel hidden">
+            <form id="vendor-form" class="form-grid compact">
+              <label>Vendor Name<input id="vendor-name" type="text" required /></label>
+              <label>Contact Name<input id="vendor-contact" type="text" required /></label>
+              <label>Email<input id="vendor-email" type="email" required /></label>
+              <label>Phone<input id="vendor-phone" type="text" required /></label>
+              <label>Lead Time (days)<input id="vendor-lead-time" type="number" min="0" required /></label>
+              <label>Linked Order Form<select id="vendor-template"></select></label>
+              <div class="form-actions">
+                <button type="submit" class="primary">Add Vendor</button>
+                <button type="button" id="vendor-form-clear" class="ghost">Clear</button>
+              </div>
+            </form>
+          </div>
+          <div class="panel">
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Vendor</th>
+                    <th>Contact</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Lead Time</th>
+                    <th>Order Form</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="vendor-table"></tbody>
+              </table>
+            </div>
+          </div>
+          <div id="order-form-panel" class="panel form-panel hidden">
+            <form id="order-form-template-form" class="form-grid compact">
+              <label>Template ID<input id="order-form-template-id" type="text" required /></label>
+              <label>Template Name<input id="order-form-template-name" type="text" required /></label>
+              <label
+                >Form Style<select id="order-form-template-variant">
+                  <option value="aquaflow">AquaFlow Style</option>
+                  <option value="bathbuild">BathBuild Style</option>
+                </select></label
+              >
+              <label style="grid-column: 1 / -1">Notes<input id="order-form-template-notes" type="text" /></label>
+              <div class="form-actions">
+                <button type="submit" class="primary">Save Form</button>
+                <button type="button" id="order-form-template-clear" class="ghost">Clear</button>
+              </div>
+            </form>
+          </div>
+          <div class="panel">
+            <div class="table-header compact-header">
+              <div>
+                <h4>Order Forms</h4>
+                <p class="subtle">Create and maintain vendor-linked order form templates here.</p>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Template ID</th>
+                    <th>Name</th>
+                    <th>Style</th>
+                    <th>Notes</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="order-form-template-table"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <template id="empty-state-template">
+      <div class="empty-state">
+        <h4>No records yet</h4>
+        <p>Use the form above to create the first record for this section.</p>
       </div>
+    </template>
 
-
-      <section id="order-forms-view" class="view">
-        <div class="section-heading section-heading-split">
-          <div><p class="eyebrow">Order Forms</p><h3>Manage placeholder form templates</h3></div>
-          <button class="secondary form-toggle" data-form-target="order-form-panel" data-open-label="Add Order Form" data-close-label="Hide Form">Add Order Form</button>
-        </div>
-        <div id="order-form-panel" class="panel form-panel hidden">
-          <form id="order-form-template-form" class="form-grid compact">
-            <label>Template ID<input id="order-form-template-id" type="text" required></label>
-            <label>Template Name<input id="order-form-template-name" type="text" required></label>
-            <label>Form Style<select id="order-form-template-variant"><option value="aquaflow">AquaFlow Style</option><option value="bathbuild">BathBuild Style</option></select></label>
-            <label style="grid-column: 1 / -1;">Notes<input id="order-form-template-notes" type="text"></label>
-            <div class="form-actions">
-              <button type="submit" class="primary">Add Order Form</button>
-              <button type="button" id="order-form-template-clear" class="ghost">Clear</button>
-            </div>
-          </form>
-        </div>
-        <div class="panel">
-          <div class="table-wrap">
-            <table>
-              <thead><tr><th>Template ID</th><th>Name</th><th>Style</th><th>Notes</th><th></th></tr></thead>
-              <tbody id="order-form-template-table"></tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      <section id="warehouses-view" class="view">        <div class="section-heading section-heading-split">
-          <div><p class="eyebrow">Warehouses</p><h3>Manage locations</h3></div>
-          <button class="secondary form-toggle" data-form-target="warehouse-form-panel" data-open-label="Add Warehouse" data-close-label="Hide Form">Add Warehouse</button>
-        </div>
-        <div id="warehouse-form-panel" class="panel form-panel hidden">
-          <form id="warehouse-form" class="form-grid compact">
-            <label>Warehouse Name<input id="warehouse-name" type="text" required></label>
-            <label>Warehouse Code<input id="warehouse-code" type="text" maxlength="10" required></label>
-            <div class="form-actions">
-              <button type="submit" class="primary">Add Warehouse</button>
-              <button type="button" id="warehouse-form-clear" class="ghost">Clear</button>
-            </div>
-          </form>
-        </div>
-        <div class="panel">
-          <div class="table-wrap">
-            <table>
-              <thead><tr><th>Warehouse</th><th>Code</th><th>Status</th><th></th></tr></thead>
-              <tbody id="warehouse-table"></tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      <section id="vendors-view" class="view">
-        <div class="section-heading section-heading-split">
-          <div><p class="eyebrow">Vendors</p><h3>Supplier directory</h3></div>
-          <button class="secondary form-toggle" data-form-target="vendor-form-panel" data-open-label="Add Vendor" data-close-label="Hide Form">Add Vendor</button>
-        </div>
-        <div id="vendor-form-panel" class="panel form-panel hidden">
-          <form id="vendor-form" class="form-grid compact">
-            <label>Vendor Name<input id="vendor-name" type="text" required></label>
-            <label>Contact Name<input id="vendor-contact" type="text" required></label>
-            <label>Email<input id="vendor-email" type="email" required></label>
-            <label>Phone<input id="vendor-phone" type="text" required></label>
-            <label>Lead Time (days)<input id="vendor-lead-time" type="number" min="0" required></label>
-            <label>Linked Order Form<select id="vendor-template"></select></label>
-            <div class="form-actions">
-              <button type="submit" class="primary">Add Vendor</button>
-              <button type="button" id="vendor-form-clear" class="ghost">Clear</button>
-            </div>
-          </form>
-        </div>
-        <div class="panel">
-          <div class="table-wrap">
-            <table>
-              <thead><tr><th>Vendor</th><th>Contact</th><th>Email</th><th>Phone</th><th>Lead Time</th><th>Order Form</th><th></th></tr></thead>
-              <tbody id="vendor-table"></tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-    </main>
-  </div>
-
-  <template id="empty-state-template">
-    <div class="empty-state"><h4>No records yet</h4><p>Use the form above to create the first record for this section.</p></div>
-  </template>
-
-  <script src="assets/app.js"></script>
-</body>
+    <script src="assets/app.js"></script>
+  </body>
 </html>
