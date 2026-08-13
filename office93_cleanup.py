@@ -51,8 +51,8 @@ def cleanup_demo_seed_data(db_path: str | Path, *, force: bool = False) -> dict:
         if marker is not None and not force:
             return {"cleaned": False, "alreadyCleaned": True}
 
-        # This cleanup intentionally removes every old demo transaction before the
-        # Office 93 catalog is rebuilt. No live Office 93 operational data exists yet.
+        # This conversion intentionally removes the old demo/test database before
+        # Office 93 is rebuilt. It runs once, before any real pilot counts are entered.
         db.execute("PRAGMA foreign_keys = OFF")
         removed: dict[str, int] = {}
 
@@ -64,20 +64,23 @@ def cleanup_demo_seed_data(db_path: str | Path, *, force: bool = False) -> dict:
         removed["vendors"] = _wipe_table(db, "vendors")
         removed["order_form_templates"] = _wipe_table(db, "order_form_templates")
 
-        # Keep the one login currently needed to administer the pilot. Remove the
-        # Dallas/Chicago/Phoenix seeded users and any other generated test accounts.
+        # Keep the one login needed to administer the pilot. Everything else in the
+        # current database was generated for Dallas/Chicago/Phoenix testing.
         if _table_exists(db, "users"):
             removed["users"] = int(
                 db.execute("SELECT COUNT(*) FROM users WHERE username <> ?", (KEEP_USERNAME,)).fetchone()[0]
             )
             db.execute("DELETE FROM users WHERE username <> ?", (KEEP_USERNAME,))
 
-        # Reset the PO sequence so the first real PO does not inherit test numbering.
+        # Start real PO numbering from the original clean baseline rather than from
+        # whatever number the stress/demo runs happened to reach.
         if _table_exists(db, "app_counters"):
-            db.execute("DELETE FROM app_counters WHERE name = 'po_number'")
+            db.execute(
+                "INSERT OR REPLACE INTO app_counters (name, current_value) VALUES ('po_number', 1000)"
+            )
 
-        # Reset autoincrement sequences for data tables we just cleared. This is not
-        # required for correctness, but it keeps the pilot database clean and readable.
+        # Reset autoincrement sequences for the cleared operational tables. This is
+        # cosmetic, but keeps the pilot database much easier to inspect and support.
         if _table_exists(db, "sqlite_sequence"):
             cleared_tables = TRANSACTION_TABLES + ["parts", "warehouses", "vendors", "order_form_templates"]
             placeholders = ",".join("?" for _ in cleared_tables)
@@ -94,12 +97,41 @@ def cleanup_demo_seed_data(db_path: str | Path, *, force: bool = False) -> dict:
 
 
 def disable_demo_reset(app) -> None:
-    # app.py still contains the historical /api/reset route. Replace its handler at
-    # runtime so the old Reset Demo Data control cannot repopulate fake records.
-    if "api_reset" not in app.view_functions:
-        return
+    # app.py still contains the historical /api/reset route. Replace its handler so
+    # an old bookmark or stale browser cannot repopulate fake records.
+    if "api_reset" in app.view_functions:
+        def demo_reset_disabled():
+            return jsonify({"error": "Demo reset has been disabled for the Office 93 pilot."}), 410
 
-    def demo_reset_disabled():
-        return jsonify({"error": "Demo reset has been disabled for the Office 93 pilot."}), 410
+        app.view_functions["api_reset"] = demo_reset_disabled
 
-    app.view_functions["api_reset"] = demo_reset_disabled
+    # Also remove the obsolete Reset Demo Data button from the rendered pilot UI.
+    @app.after_request
+    def remove_demo_reset_button(response):
+        content_type = str(response.headers.get("Content-Type") or "")
+        if response.status_code != 200 or "text/html" not in content_type.lower():
+            return response
+        try:
+            html = response.get_data(as_text=True)
+        except Exception:
+            return response
+        if "Reset Demo Data" not in html or "</body>" not in html.lower():
+            return response
+        script = """
+<script>
+(() => {
+  const removeDemoReset = () => {
+    document.querySelectorAll('button').forEach((button) => {
+      if ((button.textContent || '').trim() === 'Reset Demo Data') button.remove();
+    });
+  };
+  removeDemoReset();
+  new MutationObserver(removeDemoReset).observe(document.documentElement, {childList:true, subtree:true});
+})();
+</script>
+"""
+        index = html.lower().rfind("</body>")
+        html = html[:index] + script + html[index:]
+        response.set_data(html)
+        response.headers["Content-Length"] = str(len(response.get_data()))
+        return response
