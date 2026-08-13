@@ -11,6 +11,7 @@ if hasattr(time, "tzset"):
     time.tzset()
 
 from app import BASE_DIR, DB_PATH, app, current_user_can
+from corporate_order_workflow import register_corporate_order_workflow
 from office93_catalog import register_office93_catalog
 from office93_cleanup import cleanup_demo_seed_data, disable_demo_reset
 from office93_lumber_reference import sync_lumber_reference_items
@@ -56,5 +57,10 @@ register_order_form_plugin(
     base_dir=BASE_DIR,
     permission_checker=lambda permission: current_user_can(permission),
 )
+
+# Corporate PDF generation now feeds the existing ShopFlow PO workflow instead of
+# bypassing it. Generated orders begin Email Pending, require the Email Sent
+# confirmation, then remain Waiting for Part until receiving closes them out.
+register_corporate_order_workflow(app, db_path=DB_PATH)
 
 disable_demo_reset(app)
