@@ -4,7 +4,8 @@ import os
 
 from waitress import serve
 
-from app import app, init_db
+from app import init_db
+from server import app
 
 
 def main() -> None:
