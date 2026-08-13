@@ -2,8 +2,8 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "installCommand": "python -m pip install -r requirements.txt",
   "functions": {
-    "app.py": {
-      "excludeFiles": "{.venv/**,node_modules/**,instance/**,__pycache__/**,*.log,stress_test.py,scan_pull_smoke_test.py}"
+    "server.py": {
+      "excludeFiles": "{.venv/**,node_modules/**,instance/**,__pycache__/**,*.log,stress_test.py,scan_pull_smoke_test.py,tools/**}"
     }
   }
 }
