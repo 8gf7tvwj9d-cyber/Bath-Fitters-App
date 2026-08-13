@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import os
 import time
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
-# Corporate order forms should use Davenport's business date even when hosted on UTC servers.
+# Keep legacy local-time behavior for code that still relies on the process timezone.
 os.environ.setdefault("TZ", "America/Chicago")
 if hasattr(time, "tzset"):
     time.tzset()
@@ -12,7 +14,23 @@ from app import BASE_DIR, DB_PATH, app, current_user_can
 from office93_catalog import register_office93_catalog
 from office93_cleanup import cleanup_demo_seed_data, disable_demo_reset
 from office93_lumber_reference import sync_lumber_reference_items
+import order_form_plugin as corporate_order_forms
 from order_form_plugin import register_order_form_plugin
+
+
+# Windows does not honor the POSIX TZ environment variable the same way Linux does,
+# and hosted servers commonly run in UTC. Force every corporate order-form date to
+# use Davenport's America/Chicago business date regardless of the machine clock.
+OFFICE_TIMEZONE = ZoneInfo("America/Chicago")
+
+
+class DavenportBusinessDate:
+    @classmethod
+    def today(cls):
+        return datetime.now(OFFICE_TIMEZONE).date()
+
+
+corporate_order_forms.date = DavenportBusinessDate
 
 # One-time conversion from the old demo database to a clean Office 93 pilot database.
 # The manager login is preserved; demo warehouses, transactions, vendors, parts,
